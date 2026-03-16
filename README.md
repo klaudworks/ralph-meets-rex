@@ -1,4 +1,4 @@
-# rex-meets-ralph
+# @klaudworks/rex
 
 ![Rex workflows vs Ralph loops](docs/images/rex-workflows-vs-ralph-loops.jpg)
 
