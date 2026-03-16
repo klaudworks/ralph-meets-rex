@@ -9,11 +9,13 @@ import { RootCommand } from "./commands/root";
 import { RmrError } from "./lib/errors";
 import { logger } from "./lib/logger";
 import { RunCommand } from "./commands/run";
+import { getVersion } from "./lib/version";
 
 const [, , ...args] = process.argv;
 
 const cli = new Cli({
   binaryName: "rmr",
+  binaryVersion: getVersion(),
   enableColors: false
 });
 
