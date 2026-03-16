@@ -1,6 +1,7 @@
 import { Command } from "clipanion";
 import { basename } from "node:path";
 
+import { BaseCommand } from "./base";
 import { getVersion } from "../lib/version";
 
 type ShellName = "bash" | "zsh" | "fish";
@@ -19,7 +20,7 @@ function detectShell(): ShellName | null {
   return null;
 }
 
-export class RootCommand extends Command {
+export class RootCommand extends BaseCommand {
   public static paths = [Command.Default];
 
   public async execute(): Promise<number> {

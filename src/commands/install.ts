@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { Command, Option } from "clipanion";
 
+import { BaseCommand } from "./base";
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
 import { ui } from "../lib/ui";
@@ -23,7 +24,7 @@ function getExamplesWorkflowsDir(): string {
   return fromSrc;
 }
 
-export class InstallCommand extends Command {
+export class InstallCommand extends BaseCommand {
   public static paths = [["install"]];
 
   public static usage = Command.Usage({

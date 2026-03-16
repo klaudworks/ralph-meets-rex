@@ -1,5 +1,6 @@
-import { Command, Option } from "clipanion";
+import { Option } from "clipanion";
 
+import { BaseCommand } from "./base";
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
 import { listRunIdCompletions, listWorkflowCompletions } from "../lib/completions";
@@ -14,7 +15,7 @@ function parseTarget(value: string): CompletionTarget {
   throw new UserInputError(`Invalid completion target "${value}".`);
 }
 
-export class CompleteCommand extends Command {
+export class CompleteCommand extends BaseCommand {
   public static paths = [["complete"]];
 
   public readonly target = Option.String({

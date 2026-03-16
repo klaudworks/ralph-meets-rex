@@ -128,9 +128,25 @@ export const ui = {
         ? chalk.dim(`│ ${formatLine("step", info.currentStep)} │\n`)
         : `│ ${formatLine("step", info.currentStep)} │\n`
     );
+    process.stdout.write(
+      isTTY
+        ? chalk.dim(`│ ${formatLine("harness", info.harness ?? "(auto)")} │\n`)
+        : `│ ${formatLine("harness", info.harness ?? "(auto)")} │\n`
+    );
+    process.stdout.write(
+      isTTY
+        ? chalk.dim(`│ ${formatLine("model", info.model ?? "(default)")} │\n`)
+        : `│ ${formatLine("model", info.model ?? "(default)")} │\n`
+    );
 
-    // Word-wrap the task across multiple lines, aligned to value column
-    const taskLines = wrapText(info.task, valueWidth);
+    // Word-wrap the task across multiple lines, preserving user newlines.
+    const taskLines = info.task.split("\n").flatMap((line) => {
+      if (line === "") {
+        return [""];
+      }
+
+      return wrapText(line, valueWidth);
+    });
     for (let i = 0; i < taskLines.length; i++) {
       const label = i === 0 ? "task" : "";
       const content = formatLine(label, taskLines[i] ?? "");
@@ -339,6 +355,55 @@ export const ui = {
       rl.question(styledMessage, (answer) => {
         rl.close();
         resolve(answer);
+      });
+    });
+  },
+
+  /**
+   * Prompt the user for multiline input. Submit with an empty line (Enter twice).
+   */
+  multilinePrompt(message: string): Promise<string> {
+    return new Promise((resolve) => {
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+
+      const lines: string[] = [];
+      let settled = false;
+      const styledMessage = isTTY ? chalk.cyan(message) : message;
+      const linePrompt = isTTY ? chalk.cyan("> ") : "> ";
+
+      const finish = () => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        rl.close();
+        resolve(lines.join("\n"));
+      };
+
+      process.stdout.write(styledMessage);
+      process.stdout.write("\n");
+      rl.setPrompt(linePrompt);
+      rl.prompt();
+
+      rl.on("line", (line) => {
+        if (line.trim() === "") {
+          finish();
+          return;
+        }
+
+        lines.push(line);
+        rl.prompt();
+      });
+
+      rl.on("close", () => {
+        if (!settled) {
+          settled = true;
+          resolve(lines.join("\n"));
+        }
       });
     });
   }

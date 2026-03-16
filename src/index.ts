@@ -33,7 +33,7 @@ cli.register(CompletionCommand);
 try {
   const exitCode = await cli.run(args);
 
-  process.exitCode = exitCode;
+  process.exitCode = Math.max(process.exitCode ?? 0, exitCode);
 } catch (error) {
   if (error instanceof RmrError) {
     logger.error(`${error.code}: ${error.message}`);

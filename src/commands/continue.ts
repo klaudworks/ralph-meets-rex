@@ -1,5 +1,6 @@
 import { Command, Option } from "clipanion";
 
+import { BaseCommand } from "./base";
 import { loadConfig } from "../lib/config";
 import { loadRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
@@ -8,7 +9,7 @@ import { startUpdateCheck } from "../lib/update-check";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
 import { ui } from "../lib/ui";
 
-export class ContinueCommand extends Command {
+export class ContinueCommand extends BaseCommand {
   public static paths = [["continue"]];
 
   public static usage = Command.Usage({
@@ -79,6 +80,11 @@ export class ContinueCommand extends Command {
       runState.current_step = this.step;
     }
 
+    const currentStep = workflow.steps.find((step) => step.id === runState.current_step);
+    const currentAgent = currentStep
+      ? workflow.agents.find((agent) => agent.id === currentStep.agent)
+      : undefined;
+
     const effectiveAllowAll = this.noAllowAll ? false : this.allowAll;
 
     ui.workflowHeader({
@@ -90,8 +96,8 @@ export class ContinueCommand extends Command {
       currentStep: runState.current_step,
       runFile: "",
       allowAll: effectiveAllowAll,
-      harness: this.harness,
-      model: this.model,
+      harness: harnessOverride ?? currentAgent?.harness ?? runState.last_harness?.name,
+      model: this.model ?? currentAgent?.model,
       varsCount: 0
     });
 

@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Command } from "clipanion";
-
+import { BaseCommand } from "./base";
 import { loadConfig } from "../lib/config";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
 import { ui } from "../lib/ui";
@@ -97,7 +97,7 @@ async function getBundledWorkflows(examplesDir: string): Promise<WorkflowInfo[]>
   return workflows.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export class ListCommand extends Command {
+export class ListCommand extends BaseCommand {
   public static paths = [["list"]];
 
   public static usage = Command.Usage({

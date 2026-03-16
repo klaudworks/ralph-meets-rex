@@ -1,5 +1,6 @@
 import { Command, Option } from "clipanion";
 
+import { BaseCommand } from "./base";
 import { UserInputError } from "../lib/errors";
 
 type ShellName = "bash" | "zsh" | "fish";
@@ -93,7 +94,7 @@ function fishScript(): string {
   ].join("\n");
 }
 
-export class CompletionCommand extends Command {
+export class CompletionCommand extends BaseCommand {
   public static paths = [["completion"]];
 
   public static usage = Command.Usage({

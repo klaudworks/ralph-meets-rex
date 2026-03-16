@@ -1,10 +1,12 @@
 import { Command, Option } from "clipanion";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
+import { BaseCommand } from "./base";
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
 import { parseHarnessOverride, type HarnessName } from "../lib/types";
+import type { WorkflowDefinition } from "../lib/types";
 import { startUpdateCheck } from "../lib/update-check";
 import { createInitialRunState, generateRunId, saveRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
@@ -14,6 +16,11 @@ import { ui } from "../lib/ui";
 interface ParsedVar {
   key: string;
   value: string;
+}
+
+interface ErrnoLike {
+  code?: unknown;
+  path?: unknown;
 }
 
 function parseVar(input: string): ParsedVar {
@@ -28,7 +35,76 @@ function parseVar(input: string): ParsedVar {
   };
 }
 
-export class RunCommand extends Command {
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Unknown error";
+  }
+}
+
+function isErrnoLike(error: unknown): error is ErrnoLike {
+  return typeof error === "object" && error !== null;
+}
+
+async function resolveWorkflowPath(inputPath: string): Promise<string> {
+  const absolutePath = resolve(inputPath);
+
+  try {
+    const pathStat = await stat(absolutePath);
+
+    if (!pathStat.isDirectory()) {
+      return absolutePath;
+    }
+
+    const yamlPath = resolve(absolutePath, "workflow.yaml");
+    try {
+      const yamlStat = await stat(yamlPath);
+      if (yamlStat.isFile()) {
+        return yamlPath;
+      }
+    } catch {
+      // Fall through to check workflow.yml
+    }
+
+    const ymlPath = resolve(absolutePath, "workflow.yml");
+    try {
+      const ymlStat = await stat(ymlPath);
+      if (ymlStat.isFile()) {
+        return ymlPath;
+      }
+    } catch {
+      // Fall through to user error
+    }
+
+    throw new UserInputError(
+      `Workflow directory does not contain workflow.yaml or workflow.yml: ${absolutePath}`
+    );
+  } catch (error) {
+    if (isErrnoLike(error) && error.code === "ENOENT") {
+      const hint = absolutePath.includes(`${resolve(".rmr")}/workflow/`)
+        ? " Did you mean .rmr/workflows/?"
+        : "";
+      throw new UserInputError(`Workflow does not exist: ${absolutePath}${hint}`);
+    }
+
+    if (error instanceof UserInputError) {
+      throw error;
+    }
+
+    throw new UserInputError(`Failed to access workflow path "${absolutePath}": ${getErrorMessage(error)}`);
+  }
+}
+
+export class RunCommand extends BaseCommand {
   public static paths = [["run"]];
 
   public static usage = Command.Usage({
@@ -119,8 +195,8 @@ export class RunCommand extends Command {
 
     // No task provided - prompt interactively if TTY, otherwise error
     if (process.stdin.isTTY) {
-      ui.warning("No task provided. Please enter your task below.");
-      const task = await ui.prompt("Task: ");
+      ui.warning("No task provided. Enter your task below. Press Enter twice to submit.");
+      const task = await ui.multilinePrompt("Task: ");
       const trimmedTask = task.trim();
       if (!trimmedTask) {
         throw new UserInputError("Task cannot be empty.");
@@ -134,13 +210,26 @@ export class RunCommand extends Command {
   public async execute(): Promise<number> {
     const showUpdateNotice = startUpdateCheck();
     const config = await loadConfig();
-    const { task, displayTask } = await this.resolveTask();
     const harnessOverride = parseHarnessOverride(this.harness);
     const parsedVars = this.vars.map(parseVar);
     const effectiveAllowAll = this.noAllowAll ? false : this.allowAll;
     const varsObject = Object.fromEntries(parsedVars.map((entry) => [entry.key, entry.value]));
-    const workflowPath = resolve(this.workflowPath);
-    const workflow = await loadWorkflowDefinition(workflowPath);
+    const workflowPath = await resolveWorkflowPath(this.workflowPath);
+    let workflow: WorkflowDefinition;
+
+    try {
+      workflow = await loadWorkflowDefinition(workflowPath);
+    } catch (error) {
+      if (isErrnoLike(error) && error.code === "ENOENT") {
+        throw new UserInputError(`Workflow does not exist: ${workflowPath}`);
+      }
+
+      throw new UserInputError(
+        `Failed to load workflow "${workflowPath}": ${getErrorMessage(error)}`
+      );
+    }
+
+    const { task, displayTask } = await this.resolveTask();
     const runId = generateRunId();
     const runState = createInitialRunState({
       runId,
@@ -149,6 +238,10 @@ export class RunCommand extends Command {
       task,
       vars: varsObject
     });
+    const initialStep = workflow.steps.find((step) => step.id === runState.current_step);
+    const initialAgent = initialStep
+      ? workflow.agents.find((agent) => agent.id === initialStep.agent)
+      : undefined;
     const runPath = await saveRunState(config, runState);
 
     ui.workflowHeader({
@@ -160,8 +253,8 @@ export class RunCommand extends Command {
       currentStep: runState.current_step,
       runFile: runPath,
       allowAll: effectiveAllowAll,
-      harness: this.harness,
-      model: this.model,
+      harness: harnessOverride ?? initialAgent?.harness,
+      model: this.model ?? initialAgent?.model,
       varsCount: parsedVars.length
     });
 
