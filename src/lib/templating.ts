@@ -17,7 +17,7 @@ export function resolveTemplate(template: string, context: Record<string, string
   return template.replace(TEMPLATE_VARIABLE_REGEX, (_full, key: string) => {
     const value = context[key];
     if (typeof value !== "string" || value.trim() === "") {
-      throw new ValidationError(`Template variable "${key}" is missing.`);
+      return "";
     }
 
     return value;

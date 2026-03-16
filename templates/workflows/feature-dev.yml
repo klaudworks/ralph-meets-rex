@@ -1,0 +1,63 @@
+# rex-managed: true
+# Feature development workflow for Rex.
+# Three agents: planner (research + plan), tackle (implement), review (verify).
+# The review step can loop back to implement or escalate to human intervention.
+#
+# Agent prompts in .rex/agents/ define role, instructions, and output format.
+# Step inputs only pass the dynamic context (variables from prior steps).
+# Variables reference step IDs, not agent IDs: {{step_id.key}}
+#
+# Routing is controlled by <next_state> in agent output.
+# The planner can reject a task by setting next_state=done.
+# The reviewer can request changes by setting next_state=implement.
+
+id: feature-dev
+name: Feature Development
+
+agents:
+  - id: planner
+    provider: claude-code
+    prompt: planner.md
+
+  - id: developer
+    provider: claude-code
+    prompt: tackle.md
+
+  - id: reviewer
+    provider: claude-code
+    prompt: review.md
+
+steps:
+  - id: plan
+    agent: planner
+    default_next: implement
+    input_required: [task]
+    outputs:
+      required: []
+    input: |
+      Task: {{task}}
+
+  - id: implement
+    agent: developer
+    default_next: verify
+    input_required: [task, plan.plan]
+    outputs:
+      required: [summary]
+    input: |
+      Task: {{task}}
+      Plan: {{plan.plan}}
+      Reviewer feedback: {{verify.issues}}
+
+  - id: verify
+    agent: reviewer
+    default_next: done
+    input_required: [implement.summary]
+    outputs:
+      required: []
+    input: |
+      Task: {{task}}
+      Plan: {{plan.plan}}
+      Developer summary: {{implement.summary}}
+      Commit: {{implement.commit}}
+      Files changed: {{implement.files_changed}}
+      Tests: {{implement.tests}}

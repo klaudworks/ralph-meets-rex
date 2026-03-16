@@ -77,7 +77,7 @@ describe("cli integration", () => {
 
     expect(persisted.status).toBe("done");
     expect(persisted.current_step).toBe("done");
-    expect(persisted.context["worker.result"]).toBe("ok");
+    expect(persisted.context["execute.result"]).toBe("ok");
   });
 
   test("run pauses and continue resumes", async () => {
