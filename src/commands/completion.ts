@@ -26,22 +26,27 @@ function bashScript(): string {
     "  fi",
     "",
     "  if [[ \"${prev}\" == \"continue\" ]]; then",
-    "    COMPREPLY=( $(rex complete run-id \"${cur}\") )",
+    "    COMPREPLY=( $(rmr complete run-id \"${cur}\") )",
     "    return 0",
     "  fi",
     "",
     "  if [[ \"${prev}\" == \"run\" ]]; then",
-    "    COMPREPLY=( $(rex complete workflow \"${cur}\") )",
+    "    COMPREPLY=( $(rmr complete workflow \"${cur}\") )",
+    "    return 0",
+    "  fi",
+    "",
+    "  if [[ \"${prev}\" == \"install\" ]]; then",
+    "    COMPREPLY=( $(compgen -W \"feature-dev\" -- \"${cur}\") )",
     "    return 0",
     "  fi",
     "}",
-    "complete -F _rex_complete rex"
+    "complete -F _rex_complete rmr"
   ].join("\n");
 }
 
 function zshScript(): string {
   return [
-    "#compdef rex",
+    "#compdef rmr",
     "_rex_complete() {",
     "  local -a subcommands",
     "  subcommands=(install run continue complete completion)",
@@ -52,33 +57,39 @@ function zshScript(): string {
     "  fi",
     "",
     "  if [[ ${words[2]} == continue && $CURRENT -eq 3 ]]; then",
-    "    compadd -- $(rex complete run-id \"${words[CURRENT]}\")",
+    "    compadd -- $(rmr complete run-id \"${words[CURRENT]}\")",
     "    return",
     "  fi",
     "",
     "  if [[ ${words[2]} == run && $CURRENT -eq 3 ]]; then",
-    "    compadd -- $(rex complete workflow \"${words[CURRENT]}\")",
+    "    compadd -- $(rmr complete workflow \"${words[CURRENT]}\")",
+    "    return",
+    "  fi",
+    "",
+    "  if [[ ${words[2]} == install && $CURRENT -eq 3 ]]; then",
+    "    compadd -- feature-dev",
     "    return",
     "  fi",
     "}",
-    "compdef _rex_complete rex"
+    "compdef _rex_complete rmr"
   ].join("\n");
 }
 
 function fishScript(): string {
   return [
     "function __rex_complete_run_id",
-    "  rex complete run-id (commandline -ct)",
+    "  rmr complete run-id (commandline -ct)",
     "end",
     "",
     "function __rex_complete_workflow",
-    "  rex complete workflow (commandline -ct)",
+    "  rmr complete workflow (commandline -ct)",
     "end",
     "",
-    "complete -c rex -f",
-    "complete -c rex -n '__fish_use_subcommand' -a 'install run continue complete completion'",
-    "complete -c rex -n '__fish_seen_subcommand_from continue' -a '(__rex_complete_run_id)'",
-    "complete -c rex -n '__fish_seen_subcommand_from run' -a '(__rex_complete_workflow)'"
+    "complete -c rmr -f",
+    "complete -c rmr -n '__fish_use_subcommand' -a 'install run continue complete completion'",
+    "complete -c rmr -n '__fish_seen_subcommand_from continue' -a '(__rex_complete_run_id)'",
+    "complete -c rmr -n '__fish_seen_subcommand_from run' -a '(__rex_complete_workflow)'",
+    "complete -c rmr -n '__fish_seen_subcommand_from install' -a 'feature-dev'"
   ].join("\n");
 }
 

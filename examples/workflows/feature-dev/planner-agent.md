@@ -45,21 +45,21 @@ decides the code-level details.
 
 ## Output
 
-Emit `<rex:*>` tags at the end of your response. Rex parses these automatically.
+Emit `<rmr:*>` tags at the end of your response. rmr parses these automatically.
 
 For valid issues (proceeds to implementation):
 
 ```
-<rex:status>done</rex:status>
-<rex:summary>One-line summary of the plan</rex:summary>
-<rex:plan>The full implementation plan</rex:plan>
+<rmr:status>done</rmr:status>
+<rmr:summary>One-line summary of the plan</rmr:summary>
+<rmr:plan>The full implementation plan</rmr:plan>
 ```
 
 For rejected issues (terminates the workflow):
 
 ```
-<rex:status>done</rex:status>
-<rex:next_state>done</rex:next_state>
-<rex:summary>Why this issue was rejected</rex:summary>
-<rex:plan>N/A</rex:plan>
+<rmr:status>done</rmr:status>
+<rmr:next_state>done</rmr:next_state>
+<rmr:summary>Why this issue was rejected</rmr:summary>
+<rmr:plan>N/A</rmr:plan>
 ```

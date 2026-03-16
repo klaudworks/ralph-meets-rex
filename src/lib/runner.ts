@@ -1,18 +1,18 @@
-import type { RexConfig } from "./config";
+import type { RmrConfig } from "./config";
 import { loadAgentPrompt, composePrompt } from "./prompt-composer";
-import { getProviderAdapter } from "./provider-adapters";
-import { runProviderCommand } from "./process-runner";
-import { parseRexOutput, validateRequiredOutputKeys } from "./rex-output-parser";
+import { getHarnessAdapter } from "./harness-adapters";
+import { runHarnessCommand } from "./process-runner";
+import { parseRmrOutput, validateRequiredOutputKeys } from "./rmr-output-parser";
 import { saveRunState } from "./run-state";
 import { assertRequiredInputs, resolveTemplate } from "./templating";
-import type { ProviderName, RunState, StepExecution, WorkflowDefinition, WorkflowStep } from "./types";
+import type { HarnessName, RunState, StepExecution, WorkflowDefinition, WorkflowStep } from "./types";
 import { ui } from "./ui";
 
 const HUMAN_SENTINEL = "HUMAN_INTERVENTION_REQUIRED";
 
 interface ContinueOverrides {
   stepId?: string;
-  provider?: ProviderName;
+  harness?: HarnessName;
   model?: string;
   sessionId?: string;
   hint?: string;
@@ -41,16 +41,16 @@ function outputSnippet(output: string): string {
 }
 
 async function pauseRun(
-  config: RexConfig,
+  config: RmrConfig,
   runState: RunState,
   reason: string,
-  providerName: ProviderName,
+  harnessName: HarnessName,
   sessionId: string | null
 ): Promise<void> {
   runState.status = "paused_human";
   await saveRunState(config, runState);
 
-  const adapter = getProviderAdapter(providerName);
+  const adapter = getHarnessAdapter(harnessName);
   const resolvedSession = sessionId ?? "<session-id>";
 
   ui.pauseInstructions({
@@ -75,7 +75,7 @@ function applyOutputToContext(
 }
 
 export async function runWorkflow(
-  config: RexConfig,
+  config: RmrConfig,
   workflow: WorkflowDefinition,
   runState: RunState,
   options: {
@@ -97,8 +97,8 @@ export async function runWorkflow(
         config,
         runState,
         `Current step "${runState.current_step}" not found in workflow.`,
-        runState.last_provider?.name ?? "claude",
-        runState.last_provider?.session_id ?? null
+        runState.last_harness?.name ?? "claude",
+        runState.last_harness?.session_id ?? null
       );
       return runState;
     }
@@ -109,8 +109,8 @@ export async function runWorkflow(
         config,
         runState,
         `Unknown agent "${step.agent}" for step "${step.id}".`,
-        runState.last_provider?.name ?? "claude",
-        runState.last_provider?.session_id ?? null
+        runState.last_harness?.name ?? "claude",
+        runState.last_harness?.session_id ?? null
       );
       return runState;
     }
@@ -131,8 +131,8 @@ export async function runWorkflow(
       const agentPrompt = await loadAgentPrompt(runState.workflow_path, agent.prompt);
       const prompt = composePrompt(agentPrompt, renderedInput);
 
-      const provider = options.overrides?.provider ?? agent.provider;
-      const adapter = getProviderAdapter(provider);
+      const harness = options.overrides?.harness ?? agent.harness;
+      const adapter = getHarnessAdapter(harness);
       const effectiveModel = options.overrides?.model ?? agent.model;
       const adapterOptions =
         typeof effectiveModel === "string"
@@ -142,7 +142,7 @@ export async function runWorkflow(
       const selectedSessionId =
         isFirstIteration && options.overrides?.sessionId
           ? options.overrides.sessionId
-          : runState.last_provider?.session_id;
+          : runState.last_harness?.session_id;
 
       const command =
         isFirstIteration && selectedSessionId
@@ -153,24 +153,24 @@ export async function runWorkflow(
               ...adapterOptions
             });
 
-      runState.last_provider = {
-        name: provider,
+      runState.last_harness = {
+        name: harness,
         binary: command.binary,
         session_id: selectedSessionId ?? null
       };
 
-      const result = await runProviderCommand(command, adapter.createStreamParser());
+      const result = await runHarnessCommand(command, adapter.createStreamParser());
       if (result.sessionId) {
-        runState.last_provider.session_id = result.sessionId;
+        runState.last_harness.session_id = result.sessionId;
       }
 
       if (result.exitCode !== 0) {
         await pauseRun(
           config,
           runState,
-          `Provider exited with code ${result.exitCode} at step "${step.id}".`,
-          provider,
-          runState.last_provider.session_id
+          `Harness exited with code ${result.exitCode} at step "${step.id}".`,
+          harness,
+          runState.last_harness.session_id
         );
         return runState;
       }
@@ -180,15 +180,15 @@ export async function runWorkflow(
           config,
           runState,
           `HUMAN_INTERVENTION_REQUIRED at step "${step.id}".`,
-          provider,
-          runState.last_provider.session_id
+          harness,
+          runState.last_harness.session_id
         );
         return runState;
       }
 
       let stepOutput;
       try {
-        stepOutput = parseRexOutput(result.combinedOutput);
+        stepOutput = parseRmrOutput(result.combinedOutput);
         validateRequiredOutputKeys(stepOutput, step.outputs.required);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to parse step output.";
@@ -196,8 +196,8 @@ export async function runWorkflow(
           config,
           runState,
           `${message} Raw output snippet: ${outputSnippet(result.combinedOutput)}`,
-          provider,
-          runState.last_provider.session_id
+          harness,
+          runState.last_harness.session_id
         );
         return runState;
       }
@@ -211,8 +211,8 @@ export async function runWorkflow(
           config,
           runState,
           `Invalid next_state "${nextState}" at step "${step.id}".`,
-          provider,
-          runState.last_provider.session_id
+          harness,
+          runState.last_harness.session_id
         );
         return runState;
       }
@@ -222,8 +222,8 @@ export async function runWorkflow(
           config,
           runState,
           `Step "${step.id}" requested human intervention.`,
-          provider,
-          runState.last_provider.session_id
+          harness,
+          runState.last_harness.session_id
         );
         return runState;
       }
@@ -233,7 +233,7 @@ export async function runWorkflow(
         step_number: stepNumber,
         step_id: step.id,
         agent_id: agent.id,
-        session_id: runState.last_provider?.session_id ?? null,
+        session_id: runState.last_harness?.session_id ?? null,
         started_at: stepStartedAt,
         completed_at: new Date().toISOString()
       };
@@ -259,8 +259,8 @@ export async function runWorkflow(
         config,
         runState,
         `${reason} (step "${step.id}")`,
-        options.overrides?.provider ?? agent.provider,
-        runState.last_provider?.session_id ?? null
+        options.overrides?.harness ?? agent.harness,
+        runState.last_harness?.session_id ?? null
       );
       return runState;
     }

@@ -1,14 +1,14 @@
 import { ValidationError } from "./errors";
 
-export interface RexStepOutput {
+export interface RmrStepOutput {
   status?: string | undefined;
   next_state?: string | undefined;
   values: Record<string, string>;
 }
 
-const REX_TAG_REGEX = /<rex:([a-z][a-z0-9_]*)>([\s\S]*?)<\/rex:\1>/g;
+const REX_TAG_REGEX = /<rmr:([a-z][a-z0-9_]*)>([\s\S]*?)<\/rmr:\1>/g;
 
-export function parseRexOutput(rawText: string): RexStepOutput {
+export function parseRmrOutput(rawText: string): RmrStepOutput {
   const values: Record<string, string> = {};
   let fieldCount = 0;
 
@@ -24,10 +24,10 @@ export function parseRexOutput(rawText: string): RexStepOutput {
   }
 
   if (fieldCount === 0) {
-    throw new ValidationError("No <rex:*> tags found in output.");
+    throw new ValidationError("No <rmr:*> tags found in output.");
   }
 
-  const output: RexStepOutput = { values };
+  const output: RmrStepOutput = { values };
   if (typeof values.status === "string") {
     output.status = values.status;
   }
@@ -39,7 +39,7 @@ export function parseRexOutput(rawText: string): RexStepOutput {
 }
 
 export function validateRequiredOutputKeys(
-  output: RexStepOutput,
+  output: RmrStepOutput,
   requiredKeys: string[]
 ): void {
   const missing = requiredKeys.filter((key) => {

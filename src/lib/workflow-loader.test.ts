@@ -11,7 +11,7 @@ id: quick-task
 name: Quick Task
 agents:
   - id: worker
-    provider: claude
+    harness: claude
     prompt: worker.md
 steps:
   - id: execute
@@ -26,7 +26,7 @@ steps:
 
 describe("workflow-loader", () => {
   test("loads valid workflow", async () => {
-    const dir = await mkdtemp(resolve(tmpdir(), "rex-workflow-"));
+    const dir = await mkdtemp(resolve(tmpdir(), "rmr-workflow-"));
     const file = resolve(dir, "workflow.yml");
     await writeFile(file, validWorkflow, "utf8");
 
@@ -36,7 +36,7 @@ describe("workflow-loader", () => {
   });
 
   test("fails on duplicate step ids", async () => {
-    const dir = await mkdtemp(resolve(tmpdir(), "rex-workflow-"));
+    const dir = await mkdtemp(resolve(tmpdir(), "rmr-workflow-"));
     const file = resolve(dir, "workflow.yml");
     await writeFile(
       file,

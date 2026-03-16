@@ -29,29 +29,29 @@ correctness, catch regressions, and ensure code quality.
 
 ## Decisions
 
-Use `<rex:next_state>` to route the workflow.
+Use `<rmr:next_state>` to route the workflow.
 
 **Approve** -- the change is correct and improves the codebase:
 
 ```
-<rex:status>done</rex:status>
-<rex:next_state>done</rex:next_state>
-<rex:summary>Why this change is good</rex:summary>
+<rmr:status>done</rmr:status>
+<rmr:next_state>done</rmr:next_state>
+<rmr:summary>Why this change is good</rmr:summary>
 ```
 
 **Request changes** -- issues that need fixing (sends back to implement):
 
 ```
-<rex:status>done</rex:status>
-<rex:next_state>implement</rex:next_state>
-<rex:issues>What needs to be fixed and why</rex:issues>
+<rmr:status>done</rmr:status>
+<rmr:next_state>implement</rmr:next_state>
+<rmr:issues>What needs to be fixed and why</rmr:issues>
 ```
 
 **Escalate** -- needs human judgment:
 
 ```
-<rex:status>human_intervention_required</rex:status>
-<rex:reason>Why human input is needed</rex:reason>
+<rmr:status>human_intervention_required</rmr:status>
+<rmr:reason>Why human input is needed</rmr:reason>
 ```
 
 ## Do NOT

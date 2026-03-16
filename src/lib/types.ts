@@ -1,26 +1,26 @@
 import { UserInputError } from "./errors";
 
-export type ProviderName = "claude" | "opencode" | "codex" | "copilot";
+export type HarnessName = "claude" | "opencode" | "codex" | "copilot";
 
-export const PROVIDERS: ProviderName[] = ["claude", "opencode", "codex", "copilot"];
+export const HARNESSES: HarnessName[] = ["claude", "opencode", "codex", "copilot"];
 
-export function parseProviderOverride(value: string | undefined): ProviderName | undefined {
+export function parseHarnessOverride(value: string | undefined): HarnessName | undefined {
   if (!value) {
     return undefined;
   }
 
-  if (!PROVIDERS.includes(value as ProviderName)) {
+  if (!HARNESSES.includes(value as HarnessName)) {
     throw new UserInputError(
-      `Invalid provider override "${value}". Expected one of: ${PROVIDERS.join(", ")}.`
+      `Invalid harness override "${value}". Expected one of: ${HARNESSES.join(", ")}.`
     );
   }
 
-  return value as ProviderName;
+  return value as HarnessName;
 }
 
 export interface WorkflowAgent {
   id: string;
-  provider: ProviderName;
+  harness: HarnessName;
   prompt: string;
   model?: string;
 }
@@ -44,8 +44,8 @@ export interface WorkflowDefinition {
   steps: WorkflowStep[];
 }
 
-export interface LastProviderState {
-  name: ProviderName;
+export interface LastHarnessState {
+  name: HarnessName;
   binary: string;
   session_id: string | null;
 }
@@ -67,7 +67,7 @@ export interface RunState {
   status: RunStatus;
   current_step: string;
   context: Record<string, string>;
-  last_provider: LastProviderState | null;
+  last_harness: LastHarnessState | null;
   step_history: StepExecution[];
   updated_at: string;
 }

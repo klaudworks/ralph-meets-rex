@@ -1,43 +1,45 @@
-# @klaudworks/rex
+# Ralph Meets Rex
 
-![Rex](docs/images/rex.jpg)
+![rmr](docs/images/hero.jpg)
 
-`rex` is a state-machine workflow orchestrator CLI.
+Define multi-step coding workflows that match how you actually work. `rmr` orchestrates AI agents through YAML-defined state machines — plan, implement, review, loop — so you can encode your process once and run it on any task.
 
-It runs a YAML-defined flow step by step, tracks run state in `.rex/runs`, and lets you resume paused runs with provider/session overrides.
-
-## Install
+## Quick Start
 
 ```bash
-bun install
-bun run build
-npm link
+npm install -g @klaudworks/rmr@latest        # install or update
+rmr install feature-dev                       # add the feature-dev workflow
+rmr run .rmr/workflows/feature-dev/workflow.yaml --task "Implement feature X"  # run it
 ```
 
-## Quick start
+## Sample Workflows
+
+### [feature-dev](docs/workflows/feature-dev/)
+
+Plan, implement, and review a single feature end-to-end — with an automatic revision loop.
+
+<p align="center">
+  <img src="docs/workflows/feature-dev/flow.svg" width="720" />
+</p>
 
 ```bash
-rex install feature-dev
-rex run .rex/workflows/feature-dev/workflow.yaml --task "Implement feature X"
+rmr install feature-dev
+rmr run .rmr/workflows/feature-dev/workflow.yaml --task "Add rate limiting to the API"
 ```
 
-Resume later:
+## Supported Harnesses
 
-```bash
-rex continue <run-id>
-```
+| Harness | |
+|---------|:---:|
+| [Claude Code](https://claude.ai/code) | :white_check_mark: |
+| [Codex](https://openai.com/index/codex/) | :x: |
+| [OpenCode](https://opencode.ai) | :x: |
 
 ## Commands
 
-- `rex install <workflow-name>`
-- `rex run <workflow-path> --task "task" [--var key=value ...] [--allow-all|--no-allow-all]`
-- `rex continue <run-id> [--step <step-id>] [--provider <provider>] [--session-id <id>]`
-- `rex completion <bash|zsh|fish>`
-- `rex complete <run-id|workflow> [partial]` (used by shell completion)
-
-## Notes
-
-- Run state is stored in `.rex/runs/*.json`.
-- Workflow completions are sourced from `.rex/workflows/*/workflow.yaml` (or `.yml`).
-- Run id completions are sourced from `.rex/runs/*.json`.
-- See `docs/workflows.md` for workflow folder layout and installation details.
+| Command                       | Description                                    |
+| ----------------------------- | ---------------------------------------------- |
+| `rmr install <workflow>`      | Copy a bundled workflow into `.rmr/workflows/` |
+| `rmr run <path> --task "..."` | Start a new workflow run                       |
+| `rmr continue <run-id>`       | Resume a paused or interrupted run             |
+| `rmr completion <shell>`      | Print shell completion script                  |

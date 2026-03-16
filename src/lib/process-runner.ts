@@ -1,5 +1,5 @@
 import { StorageError } from "./errors";
-import type { ProviderCommand, StreamLineParser } from "./provider-adapters";
+import type { HarnessCommand, StreamLineParser } from "./harness-adapters";
 import { ui } from "./ui";
 
 export interface ProcessRunResult {
@@ -140,8 +140,8 @@ async function consumeStreamParsed(
   return { rawOutput, displayText, sessionId };
 }
 
-export async function runProviderCommand(
-  command: ProviderCommand,
+export async function runHarnessCommand(
+  command: HarnessCommand,
   parseStreamLine: StreamLineParser
 ): Promise<ProcessRunResult> {
   let processRef: Bun.Subprocess<"ignore", "pipe", "pipe">;
@@ -154,10 +154,10 @@ export async function runProviderCommand(
       stderr: "pipe"
     });
   } catch {
-    throw new StorageError(`Failed to launch provider binary "${command.binary}".`);
+    throw new StorageError(`Failed to launch harness binary "${command.binary}".`);
   }
 
-  // Trap SIGINT while the child is running so Rex survives Ctrl+C.
+  // Trap SIGINT while the child is running so rmr survives Ctrl+C.
   // The signal still reaches the child (same process group), which will
   // exit with a non-zero code that the runner handles via pauseRun().
   let interrupted = false;
@@ -166,7 +166,7 @@ export async function runProviderCommand(
   };
   process.on("SIGINT", onSigint);
 
-  // All providers now use the unified stream parsing path
+  // All harnesses now use the unified stream parsing path
   const stdoutPromise = consumeStreamParsed(processRef.stdout, parseStreamLine);
   const stderrPromise = consumeStream(processRef.stderr, (chunk) => {
     process.stderr.write(chunk);

@@ -34,20 +34,20 @@ Aim for the most elegant implementation that fulfills the plan's intent.
 
 ## Output
 
-Emit `<rex:*>` tags at the end of your response. Rex parses these automatically.
+Emit `<rmr:*>` tags at the end of your response. rmr parses these automatically.
 
 On success:
 
 ```
-<rex:status>done</rex:status>
-<rex:summary>What was implemented and why</rex:summary>
-<rex:commit>The commit hash</rex:commit>
-<rex:tests>Test results summary</rex:tests>
+<rmr:status>done</rmr:status>
+<rmr:summary>What was implemented and why</rmr:summary>
+<rmr:commit>The commit hash</rmr:commit>
+<rmr:tests>Test results summary</rmr:tests>
 ```
 
 If blocked after 3 attempts:
 
 ```
-<rex:status>human_intervention_required</rex:status>
-<rex:reason>What is blocking and what was tried</rex:reason>
+<rmr:status>human_intervention_required</rmr:status>
+<rmr:reason>What is blocking and what was tried</rmr:reason>
 ```

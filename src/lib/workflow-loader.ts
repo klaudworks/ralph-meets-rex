@@ -3,9 +3,9 @@ import { resolve } from "node:path";
 import { parse } from "yaml";
 
 import { ValidationError } from "./errors";
-import type { ProviderName, WorkflowDefinition } from "./types";
+import type { HarnessName, WorkflowDefinition } from "./types";
 
-const SUPPORTED_PROVIDERS = new Set<ProviderName>([
+const SUPPORTED_HARNESSES = new Set<HarnessName>([
   "claude",
   "opencode",
   "codex",
@@ -72,17 +72,17 @@ export async function loadWorkflowDefinition(workflowPath: string): Promise<Work
 
     const agent = rawAgent as Record<string, unknown>;
     const agentId = ensureString(agent.id, `agents[${index}].id`);
-    const provider = ensureString(agent.provider, `agents[${index}].provider`) as ProviderName;
+    const harness = ensureString(agent.harness, `agents[${index}].harness`) as HarnessName;
 
-    if (!SUPPORTED_PROVIDERS.has(provider)) {
-      throw new ValidationError(`Unsupported provider "${provider}" for agent "${agentId}".`);
+    if (!SUPPORTED_HARNESSES.has(harness)) {
+      throw new ValidationError(`Unsupported harness "${harness}" for agent "${agentId}".`);
     }
 
     const prompt = ensureString(agent.prompt, `agents[${index}].prompt`);
     const model = agent.model;
     const normalized = {
       id: agentId,
-      provider,
+      harness,
       prompt
     };
 

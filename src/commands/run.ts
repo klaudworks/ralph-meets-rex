@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
-import { parseProviderOverride, type ProviderName } from "../lib/types";
+import { parseHarnessOverride, type HarnessName } from "../lib/types";
 import { createInitialRunState, generateRunId, saveRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
@@ -34,28 +34,28 @@ export class RunCommand extends Command {
     category: "Workflow",
     description: "Start a new workflow run from a workflow YAML file.",
     details:
-      "Loads and validates the workflow, creates a new run state under `.rex/runs/`, then executes steps until the run reaches `done` or pauses for human intervention.",
+      "Loads and validates the workflow, creates a new run state under `.rmr/runs/`, then executes steps until the run reaches `done` or pauses for human intervention.",
     examples: [
       [
         "Run with task flag",
-        "$0 run .rex/workflows/quick-task/workflow.yaml --task \"Implement auth middleware\""
+        "$0 run .rmr/workflows/feature-dev/workflow.yaml --task \"Implement auth middleware\""
       ],
-      ["Run with task file", "$0 run .rex/workflows/quick-task/workflow.yaml --task-file task.md"],
+      ["Run with task file", "$0 run .rmr/workflows/feature-dev/workflow.yaml --task-file task.md"],
       [
-        "Override provider",
-        "$0 run .rex/workflows/quick-task/workflow.yaml --task \"Fix bug\" --provider opencode"
+        "Override harness",
+        "$0 run .rmr/workflows/feature-dev/workflow.yaml --task \"Fix bug\" --harness opencode"
       ],
       [
         "Override model",
-        "$0 run .rex/workflows/quick-task/workflow.yaml --task \"Fix bug\" --model openai/gpt-5.3-codex-high"
+        "$0 run .rmr/workflows/feature-dev/workflow.yaml --task \"Fix bug\" --model openai/gpt-5.3-codex-high"
       ],
       [
         "Run with extra variables",
-        "$0 run .rex/workflows/feature-dev/workflow.yaml --task \"Ship feature\" --var issue_id=123 --var env=staging"
+        "$0 run .rmr/workflows/feature-dev/workflow.yaml --task \"Ship feature\" --var issue_id=123 --var env=staging"
       ],
       [
         "Disable auto-approval flags",
-        "$0 run .rex/workflows/feature-dev/workflow.yaml --task \"Fix flaky tests\" --no-allow-all"
+        "$0 run .rmr/workflows/feature-dev/workflow.yaml --task \"Fix flaky tests\" --no-allow-all"
       ]
     ]
   });
@@ -74,9 +74,9 @@ export class RunCommand extends Command {
     description: "Path to file containing task description."
   });
 
-  public readonly provider = Option.String("--provider", {
+  public readonly harness = Option.String("--harness", {
     required: false,
-    description: "Override provider for all workflow steps."
+    description: "Override harness for all workflow steps."
   });
 
   public readonly model = Option.String("--model", {
@@ -89,11 +89,11 @@ export class RunCommand extends Command {
   });
 
   public readonly allowAll = Option.Boolean("--allow-all", true, {
-    description: "Enable provider auto-approval flags when supported (default: true)."
+    description: "Enable harness auto-approval flags when supported (default: true)."
   });
 
   public readonly noAllowAll = Option.Boolean("--no-allow-all", false, {
-    description: "Disable provider auto-approval flags."
+    description: "Disable harness auto-approval flags."
   });
 
   private async resolveTask(): Promise<{ task: string; displayTask: string }> {
@@ -122,7 +122,7 @@ export class RunCommand extends Command {
   public async execute(): Promise<number> {
     const config = await loadConfig();
     const { task, displayTask } = await this.resolveTask();
-    const providerOverride = parseProviderOverride(this.provider);
+    const harnessOverride = parseHarnessOverride(this.harness);
     const parsedVars = this.vars.map(parseVar);
     const effectiveAllowAll = this.noAllowAll ? false : this.allowAll;
     const varsObject = Object.fromEntries(parsedVars.map((entry) => [entry.key, entry.value]));
@@ -139,7 +139,7 @@ export class RunCommand extends Command {
     const runPath = await saveRunState(config, runState);
 
     ui.workflowHeader({
-      title: "rex config",
+      title: "rmr config",
       workflow: workflowPath,
       workflowId: workflow.id,
       task: displayTask,
@@ -147,18 +147,18 @@ export class RunCommand extends Command {
       currentStep: runState.current_step,
       runFile: runPath,
       allowAll: effectiveAllowAll,
-      provider: this.provider,
+      harness: this.harness,
       model: this.model,
       varsCount: parsedVars.length
     });
 
     const overrides: {
-      provider?: ProviderName;
+      harness?: HarnessName;
       model?: string;
     } = {};
 
-    if (providerOverride) {
-      overrides.provider = providerOverride;
+    if (harnessOverride) {
+      overrides.harness = harnessOverride;
     }
     if (this.model) {
       overrides.model = this.model;
