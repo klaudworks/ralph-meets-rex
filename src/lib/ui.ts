@@ -350,51 +350,155 @@ export const ui = {
   },
 
   /**
-   * Prompt the user for multiline input. Submit with an empty line (Enter twice).
+   * Prompt the user for multiline input.
+   * Submit with Enter, insert newline with Shift+Enter (when supported).
    */
   multilinePrompt(message: string): Promise<string> {
     return new Promise((resolve) => {
-      const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-      });
-
-      const lines: string[] = [];
-      let settled = false;
+      const input = process.stdin;
+      const output = process.stdout;
+      const supportsRawMode = input.isTTY && typeof input.setRawMode === "function";
       const styledMessage = isTTY ? chalk.cyan(message) : message;
       const linePrompt = isTTY ? chalk.cyan("> ") : "> ";
+      const shiftEnterSequence = "\x1b[13;2u";
+      let buffer = "";
+      let settled = false;
+      let renderedLineCount = 0;
 
-      const finish = () => {
+      if (!supportsRawMode) {
+        const rl = readline.createInterface({
+          input,
+          output
+        });
+
+        rl.question(`${styledMessage} `, (answer) => {
+          rl.close();
+          resolve(answer);
+        });
+        return;
+      }
+
+      const cleanup = () => {
+        input.off("data", onData);
+        input.off("error", onError);
+        input.setRawMode(false);
+        input.pause();
+      };
+
+      const finish = (value: string) => {
         if (settled) {
           return;
         }
 
         settled = true;
-        rl.close();
-        resolve(lines.join("\n"));
+        cleanup();
+        resolve(value);
       };
 
-      process.stdout.write(styledMessage);
-      process.stdout.write("\n");
-      rl.setPrompt(linePrompt);
-      rl.prompt();
-
-      rl.on("line", (line) => {
-        if (line.trim() === "") {
-          finish();
+      const clearRenderedBuffer = () => {
+        if (renderedLineCount === 0) {
           return;
         }
 
-        lines.push(line);
-        rl.prompt();
-      });
-
-      rl.on("close", () => {
-        if (!settled) {
-          settled = true;
-          resolve(lines.join("\n"));
+        readline.cursorTo(output, 0);
+        if (renderedLineCount > 1) {
+          readline.moveCursor(output, 0, -(renderedLineCount - 1));
         }
-      });
+        readline.clearScreenDown(output);
+      };
+
+      const renderBuffer = () => {
+        clearRenderedBuffer();
+        const lines = buffer.split("\n");
+        for (let i = 0; i < lines.length; i++) {
+          output.write(`${linePrompt}${lines[i] ?? ""}`);
+          if (i < lines.length - 1) {
+            output.write("\n");
+          }
+        }
+        renderedLineCount = lines.length;
+      };
+
+      const appendText = (text: string) => {
+        const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        if (!normalized) {
+          return;
+        }
+        buffer += normalized;
+        renderBuffer();
+      };
+
+      const submit = () => {
+        output.write("\n");
+        finish(buffer);
+      };
+
+      const cancel = () => {
+        output.write("\n");
+        finish("");
+      };
+
+      const onError = () => {
+        finish(buffer);
+      };
+
+      const onData = (chunk: string | Buffer) => {
+        const value = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+
+        if (value === "\x03") {
+          cancel();
+          return;
+        }
+
+        if (value === "\x04") {
+          submit();
+          return;
+        }
+
+        if (value === shiftEnterSequence) {
+          appendText("\n");
+          return;
+        }
+
+        if (value === "\r" || value === "\n") {
+          submit();
+          return;
+        }
+
+        if (value === "\x7f" || value === "\b") {
+          if (buffer.length > 0) {
+            buffer = buffer.slice(0, -1);
+            renderBuffer();
+          }
+          return;
+        }
+
+        if (value.length > 1) {
+          const withoutBracketedPasteMarkers = value
+            .replace(/\x1b\[200~/g, "")
+            .replace(/\x1b\[201~/g, "");
+
+          if (withoutBracketedPasteMarkers.startsWith("\x1b") && !/[\r\n]/.test(withoutBracketedPasteMarkers)) {
+            return;
+          }
+
+          appendText(withoutBracketedPasteMarkers);
+          return;
+        }
+
+        if (value >= " ") {
+          appendText(value);
+        }
+      };
+
+      output.write(styledMessage);
+      output.write("\n");
+      input.setRawMode(true);
+      input.setEncoding("utf8");
+      input.resume();
+      input.on("data", onData);
+      input.on("error", onError);
+      renderBuffer();
     });
   }
 };

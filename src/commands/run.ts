@@ -195,7 +195,7 @@ export class RunCommand extends BaseCommand {
 
     // No task provided - prompt interactively if TTY, otherwise error
     if (process.stdin.isTTY) {
-      ui.warning("No task provided. Enter your task below. Press Enter twice to submit.");
+      ui.warning("No task provided. Enter your task below. Press Enter to submit (Shift+Enter for newline).");
       const task = await ui.multilinePrompt("Task: ");
       const trimmedTask = task.trim();
       if (!trimmedTask) {
