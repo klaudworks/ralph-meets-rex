@@ -50,6 +50,7 @@ export function createInitialRunState(options: {
       binary: resolveProviderForStep(options.workflow, firstStep.agent),
       session_id: null
     },
+    step_history: [],
     updated_at: new Date().toISOString()
   };
 }
@@ -87,6 +88,11 @@ export async function loadRunState(config: RexConfig, runId: string): Promise<Ru
 
     if (!parsed || typeof parsed !== "object" || parsed.run_id !== runId) {
       throw new StorageError(`Run state file is invalid for run id "${runId}".`);
+    }
+
+    // Handle migration from old run states without step_history
+    if (!Array.isArray(parsed.step_history)) {
+      parsed.step_history = [];
     }
 
     return parsed;

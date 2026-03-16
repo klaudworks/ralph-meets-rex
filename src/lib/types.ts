@@ -39,6 +39,7 @@ export interface WorkflowStep {
 export interface WorkflowDefinition {
   id: string;
   name: string;
+  version?: string;
   agents: WorkflowAgent[];
   steps: WorkflowStep[];
 }
@@ -47,6 +48,15 @@ export interface LastProviderState {
   name: ProviderName;
   binary: string;
   session_id: string | null;
+}
+
+export interface StepExecution {
+  step_number: number;
+  step_id: string;
+  agent_id: string;
+  session_id: string | null;
+  started_at: string;
+  completed_at: string;
 }
 
 export type RunStatus = "running" | "paused_human" | "done";
@@ -58,5 +68,6 @@ export interface RunState {
   current_step: string;
   context: Record<string, string>;
   last_provider: LastProviderState | null;
+  step_history: StepExecution[];
   updated_at: string;
 }

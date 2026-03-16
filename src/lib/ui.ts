@@ -151,10 +151,10 @@ export const ui = {
   /**
    * Render step start header.
    */
-  stepStart(stepId: string, agentId: string): void {
+  stepStart(stepNumber: number, stepId: string, agentId: string): void {
     const line = isTTY ? "─" : "-";
     const corner = { tl: isTTY ? "┌" : "+", tr: isTTY ? "┐" : "+" };
-    const label = ` Step: ${stepId} (${agentId}) `;
+    const label = ` Step ${stepNumber}: ${stepId} (${agentId}) `;
     const width = getBoxWidth();
     const remaining = Math.max(0, width - label.length - 2);
     const border = line.repeat(remaining);
