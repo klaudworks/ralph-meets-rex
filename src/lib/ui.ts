@@ -4,6 +4,7 @@
  */
 
 import chalk from "chalk";
+import * as readline from "node:readline";
 
 const isTTY = process.stdout.isTTY === true;
 
@@ -322,5 +323,23 @@ export const ui = {
     process.stdout.write(isTTY ? chalk.dim("Resume agent session directly:\n") : "Resume agent session directly:\n");
     process.stdout.write(`  ${info.resumeCommand}\n`);
     process.stdout.write("\n");
+  },
+
+  /**
+   * Prompt the user for input. Returns a Promise that resolves to the entered string.
+   */
+  prompt(message: string): Promise<string> {
+    return new Promise((resolve) => {
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+
+      const styledMessage = isTTY ? chalk.cyan(message) : message;
+      rl.question(styledMessage, (answer) => {
+        rl.close();
+        resolve(answer);
+      });
+    });
   }
 };

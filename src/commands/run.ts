@@ -117,6 +117,17 @@ export class RunCommand extends Command {
       return { task: this.taskFlag, displayTask: this.taskFlag };
     }
 
+    // No task provided - prompt interactively if TTY, otherwise error
+    if (process.stdin.isTTY) {
+      ui.warning("No task provided. Please enter your task below.");
+      const task = await ui.prompt("Task: ");
+      const trimmedTask = task.trim();
+      if (!trimmedTask) {
+        throw new UserInputError("Task cannot be empty.");
+      }
+      return { task: trimmedTask, displayTask: trimmedTask };
+    }
+
     throw new UserInputError("No task provided. Use --task/-t or --task-file/-f.");
   }
 
