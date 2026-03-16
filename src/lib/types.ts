@@ -1,4 +1,22 @@
-export type ProviderName = "claude" | "claude-code" | "opencode" | "codex" | "copilot";
+import { UserInputError } from "./errors";
+
+export type ProviderName = "claude" | "opencode" | "codex" | "copilot";
+
+export const PROVIDERS: ProviderName[] = ["claude", "opencode", "codex", "copilot"];
+
+export function parseProviderOverride(value: string | undefined): ProviderName | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (!PROVIDERS.includes(value as ProviderName)) {
+    throw new UserInputError(
+      `Invalid provider override "${value}". Expected one of: ${PROVIDERS.join(", ")}.`
+    );
+  }
+
+  return value as ProviderName;
+}
 
 export interface WorkflowAgent {
   id: string;
