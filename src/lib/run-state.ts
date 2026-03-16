@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 import type { RmrConfig } from "./config";
 import { StorageError } from "./errors";
-import type { HarnessName, RunState, WorkflowDefinition } from "./types";
+import type { RunState, WorkflowDefinition } from "./types";
 
 function pad(input: number): string {
   return String(input).padStart(2, "0");
@@ -46,22 +46,13 @@ export function createInitialRunState(options: {
       ...options.vars
     },
     last_harness: {
-      name: resolveHarnessForStep(options.workflow, firstStep.agent),
-      binary: resolveHarnessForStep(options.workflow, firstStep.agent),
+      name: firstStep.harness,
+      binary: firstStep.harness,
       session_id: null
     },
     step_history: [],
     updated_at: new Date().toISOString()
   };
-}
-
-function resolveHarnessForStep(workflow: WorkflowDefinition, stepAgentId: string): HarnessName {
-  const agent = workflow.agents.find((item) => item.id === stepAgentId);
-  if (!agent) {
-    throw new StorageError(`Cannot resolve harness for unknown agent "${stepAgentId}".`);
-  }
-
-  return agent.harness;
 }
 
 export async function saveRunState(config: RmrConfig, state: RunState): Promise<string> {

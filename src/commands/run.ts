@@ -6,7 +6,6 @@ import { BaseCommand } from "./base";
 import { binaryName } from "../lib/binary-name";
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
-import { parseHarnessOverride, type HarnessName } from "../lib/types";
 import type { WorkflowDefinition } from "../lib/types";
 import { startUpdateCheck } from "../lib/update-check";
 import { createInitialRunState, generateRunId, saveRunState } from "../lib/run-state";
@@ -120,14 +119,6 @@ export class RunCommand extends BaseCommand {
       ],
       ["Run with task file", "$0 run .rmr/workflows/feature-dev/workflow.yaml --task-file task.md"],
       [
-        "Override harness",
-        "$0 run .rmr/workflows/feature-dev/workflow.yaml --task \"Fix bug\" --harness opencode"
-      ],
-      [
-        "Override model",
-        "$0 run .rmr/workflows/feature-dev/workflow.yaml --task \"Fix bug\" --model openai/gpt-5.3-codex-high"
-      ],
-      [
         "Run with extra variables",
         "$0 run .rmr/workflows/feature-dev/workflow.yaml --task \"Ship feature\" --var issue_id=123 --var env=staging"
       ],
@@ -150,16 +141,6 @@ export class RunCommand extends BaseCommand {
   public readonly taskFile = Option.String("--task-file,-f", {
     required: false,
     description: "Path to file containing task description."
-  });
-
-  public readonly harness = Option.String("--harness", {
-    required: false,
-    description: "Override harness for all workflow steps."
-  });
-
-  public readonly model = Option.String("--model", {
-    required: false,
-    description: "Override model for all workflow steps (e.g., openai/gpt-5.3-codex-high)."
   });
 
   public readonly vars = Option.Array("--var", [], {
@@ -196,7 +177,7 @@ export class RunCommand extends BaseCommand {
 
     // No task provided - prompt interactively if TTY, otherwise error
     if (process.stdin.isTTY) {
-      ui.warning("No task provided. Enter your task below. Press Enter to submit (Shift+Enter for newline).");
+      ui.warning("No task provided. Enter your task below. Press Ctrl+D to submit.");
       const task = await ui.multilinePrompt("Task: ");
       const trimmedTask = task.trim();
       if (!trimmedTask) {
@@ -211,7 +192,6 @@ export class RunCommand extends BaseCommand {
   public async execute(): Promise<number> {
     const showUpdateNotice = startUpdateCheck();
     const config = await loadConfig();
-    const harnessOverride = parseHarnessOverride(this.harness);
     const parsedVars = this.vars.map(parseVar);
     const effectiveAllowAll = this.noAllowAll ? false : this.allowAll;
     const varsObject = Object.fromEntries(parsedVars.map((entry) => [entry.key, entry.value]));
@@ -252,21 +232,8 @@ export class RunCommand extends BaseCommand {
       varsCount: parsedVars.length
     });
 
-    const overrides: {
-      harness?: HarnessName;
-      model?: string;
-    } = {};
-
-    if (harnessOverride) {
-      overrides.harness = harnessOverride;
-    }
-    if (this.model) {
-      overrides.model = this.model;
-    }
-
     await runWorkflow(config, workflow, runState, {
-      allowAll: effectiveAllowAll,
-      ...(Object.keys(overrides).length > 0 && { overrides })
+      allowAll: effectiveAllowAll
     });
 
     showUpdateNotice();

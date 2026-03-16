@@ -8,17 +8,27 @@ function stripFrontmatter(content: string): string {
   return match ? content.slice(match[0].length) : content;
 }
 
-export async function loadAgentPrompt(workflowPath: string, promptFileName: string): Promise<string> {
+export async function loadPromptFile(workflowPath: string, promptFileName: string): Promise<string> {
   const promptPath = resolve(dirname(workflowPath), promptFileName);
 
   try {
     const raw = await readFile(promptPath, "utf8");
     return stripFrontmatter(raw);
   } catch {
-    throw new ConfigError(`Agent prompt file not found: ${promptPath}`);
+    throw new ConfigError(`Prompt file not found: ${promptPath}`);
   }
 }
 
-export function composePrompt(agentPrompt: string, stepInput: string): string {
-  return `${agentPrompt.trimEnd()}\n\n${stepInput.trim()}`;
+export function composePrompt(promptFile: string | undefined, promptInline: string | undefined): string {
+  const parts: string[] = [];
+
+  if (promptFile) {
+    parts.push(promptFile.trimEnd());
+  }
+
+  if (promptInline) {
+    parts.push(promptInline.trimEnd());
+  }
+
+  return parts.join("\n\n");
 }

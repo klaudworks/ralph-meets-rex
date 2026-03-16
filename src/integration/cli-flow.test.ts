@@ -56,10 +56,10 @@ describe("cli integration", () => {
 
     await mkdir(workflowDir, { recursive: true });
     await mkdir(fakeBinDir, { recursive: true });
-    await writeFile(resolve(workflowDir, "worker.md"), "You are worker", "utf8");
+    await writeFile(resolve(workflowDir, "worker.md"), "You are worker\n\nDo {{task}}", "utf8");
     await writeFile(
       resolve(workflowDir, "workflow.yaml"),
-      `id: quick-task\nname: Quick Task\nagents:\n  - id: worker\n    harness: claude\n    prompt: worker.md\nsteps:\n  - id: execute\n    agent: worker\n    default_next: done\n    input_required: [task]\n    outputs:\n      required: [result]\n    input: |\n      Do {{task}}\n`,
+      `id: quick-task\nname: Quick Task\nharness: claude\nsteps:\n  - id: execute\n    prompt_file: worker.md\n    next_step: done\n    requires:\n      inputs: [task]\n      outputs: [result]\n`,
       "utf8"
     );
 
@@ -82,7 +82,7 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Run completed");
-    expect(result.stdout).toContain("Step 1: execute (worker)");
+    expect(result.stdout).toContain("Step 1: execute");
     expect(result.stdout).toContain("harness: claude    model: (default)");
     expect(result.stdout).not.toContain("│ step:");
     expect(result.stdout).not.toContain("│ harness:");
@@ -114,10 +114,10 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
     await mkdir(fakeBinDir, { recursive: true });
 
     const workflowPath = resolve(root, "workflow.yml");
-    await writeFile(resolve(root, "worker.md"), "You are worker", "utf8");
+    await writeFile(resolve(root, "worker.md"), "You are worker\n\nDo {{task}}", "utf8");
     await writeFile(
       workflowPath,
-      `id: quick-task\nname: Quick Task\nagents:\n  - id: worker\n    harness: claude\n    prompt: worker.md\nsteps:\n  - id: execute\n    agent: worker\n    default_next: done\n    input_required: [task]\n    outputs:\n      required: [result]\n    input: |\n      Do {{task}}\n`,
+      `id: quick-task\nname: Quick Task\nharness: claude\nsteps:\n  - id: execute\n    prompt_file: worker.md\n    next_step: done\n    requires:\n      inputs: [task]\n      outputs: [result]\n`,
       "utf8"
     );
 
@@ -162,10 +162,10 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
     await mkdir(fakeBinDir, { recursive: true });
 
     const workflowPath = resolve(root, "workflow.yml");
-    await writeFile(resolve(root, "worker.md"), "You are worker", "utf8");
+    await writeFile(resolve(root, "worker.md"), "You are worker\n\nDo {{task}}", "utf8");
     await writeFile(
       workflowPath,
-      `id: quick-task\nname: Quick Task\nagents:\n  - id: worker\n    harness: claude\n    prompt: worker.md\nsteps:\n  - id: execute\n    agent: worker\n    default_next: done\n    input_required: [task]\n    outputs:\n      required: [result]\n    input: |\n      Do {{task}}\n`,
+      `id: quick-task\nname: Quick Task\nharness: claude\nsteps:\n  - id: execute\n    prompt_file: worker.md\n    next_step: done\n    requires:\n      inputs: [task]\n      outputs: [result]\n`,
       "utf8"
     );
 
@@ -206,7 +206,7 @@ fi
 
     expect(resumed.exitCode).toBe(0);
     expect(resumed.stdout).toContain("Run completed");
-    expect(resumed.stdout).toContain("Step 1: execute (worker)");
+    expect(resumed.stdout).toContain("Step 1: execute");
     expect(resumed.stdout).toContain("harness: claude    model: (default)");
   }, 15000);
 
@@ -218,10 +218,10 @@ fi
     await mkdir(fakeBinDir, { recursive: true });
 
     const workflowPath = resolve(root, "workflow.yml");
-    await writeFile(resolve(root, "worker.md"), "You are worker", "utf8");
+    await writeFile(resolve(root, "worker.md"), "You are worker\n\nDo {{task}}", "utf8");
     await writeFile(
       workflowPath,
-      `id: quick-task\nname: Quick Task\nagents:\n  - id: worker\n    harness: claude\n    model: claude-test\n    prompt: worker.md\nsteps:\n  - id: execute\n    agent: worker\n    default_next: done\n    input_required: [task]\n    outputs:\n      required: [result]\n    input: |\n      Do {{task}}\n`,
+      `id: quick-task\nname: Quick Task\nsteps:\n  - id: execute\n    prompt_file: worker.md\n    harness: claude\n    model: claude-test\n    next_step: done\n    requires:\n      inputs: [task]\n      outputs: [result]\n`,
       "utf8"
     );
 
@@ -257,11 +257,11 @@ exit 1
     await mkdir(fakeBinDir, { recursive: true });
 
     const workflowPath = resolve(root, "workflow.yml");
-    await writeFile(resolve(root, "planner.md"), "You are planner", "utf8");
-    await writeFile(resolve(root, "developer.md"), "You are developer", "utf8");
+    await writeFile(resolve(root, "planner.md"), "You are planner\n\nPlan {{task}}", "utf8");
+    await writeFile(resolve(root, "developer.md"), "You are developer\n\nImplement {{task}} using {{plan.plan}}", "utf8");
     await writeFile(
       workflowPath,
-      `id: quick-task\nname: Quick Task\nagents:\n  - id: planner\n    harness: claude\n    prompt: planner.md\n  - id: developer\n    harness: codex\n    model: gpt-5.3-codex\n    prompt: developer.md\nsteps:\n  - id: plan\n    agent: planner\n    default_next: implement\n    input_required: [task]\n    outputs:\n      required: []\n    input: |\n      Plan {{task}}\n  - id: implement\n    agent: developer\n    default_next: done\n    input_required: [task, plan.plan]\n    outputs:\n      required: [result]\n    input: |\n      Implement {{task}} using {{plan.plan}}\n`,
+      `id: quick-task\nname: Quick Task\nsteps:\n  - id: plan\n    prompt_file: planner.md\n    harness: claude\n    next_step: implement\n    requires:\n      inputs: [task]\n  - id: implement\n    prompt_file: developer.md\n    harness: codex\n    model: gpt-5.3-codex\n    next_step: done\n    requires:\n      inputs: [task, plan.plan]\n      outputs: [result]\n`,
       "utf8"
     );
 
@@ -287,7 +287,6 @@ exit 1
             {
               step_number: 1,
               step_id: "plan",
-              agent_id: "planner",
               session_id: "claude-session-1",
               started_at: "2026-03-17T01:00:00.000Z",
               completed_at: "2026-03-17T01:00:01.000Z"
@@ -323,7 +322,7 @@ echo '{"type":"item.completed","item":{"type":"agent_message","text":"<rmr:statu
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Run completed");
-    expect(result.stdout).toContain("Step 2: implement (developer)");
+    expect(result.stdout).toContain("Step 2: implement");
     expect(result.stdout).toContain("harness: codex    model: gpt-5.3-codex");
     expect(result.stderr).not.toContain("unexpected resume path for codex");
   });

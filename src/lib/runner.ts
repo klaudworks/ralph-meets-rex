@@ -1,5 +1,5 @@
 import type { RmrConfig } from "./config";
-import { loadAgentPrompt, composePrompt } from "./prompt-composer";
+import { loadPromptFile, composePrompt } from "./prompt-composer";
 import { getHarnessAdapter } from "./harness-adapters";
 import { runHarnessCommand } from "./process-runner";
 import { parseRmrOutput, validateRequiredOutputKeys } from "./rmr-output-parser";
@@ -12,8 +12,6 @@ const HUMAN_SENTINEL = "HUMAN_INTERVENTION_REQUIRED";
 
 interface ContinueOverrides {
   stepId?: string;
-  harness?: HarnessName;
-  model?: string;
   sessionId?: string;
   hint?: string;
 }
@@ -87,7 +85,7 @@ async function pauseRun(
 
 function applyOutputToContext(
   context: Record<string, string>,
-  agentId: string,
+  stepId: string,
   values: Record<string, string>
 ): void {
   for (const [key, value] of Object.entries(values)) {
@@ -95,7 +93,7 @@ function applyOutputToContext(
       continue;
     }
 
-    context[`${agentId}.${key}`] = value;
+    context[`${stepId}.${key}`] = value;
   }
 }
 
@@ -128,42 +126,40 @@ export async function runWorkflow(
       return runState;
     }
 
-    const agent = workflow.agents.find((item) => item.id === step.agent);
-    if (!agent) {
-      await pauseRun(
-        config,
-        runState,
-        `Unknown agent "${step.agent}" for step "${step.id}".`,
-        runState.last_harness?.name ?? "claude",
-        runState.last_harness?.session_id ?? null
-      );
-      return runState;
-    }
-
     const stepStartedAt = new Date().toISOString();
 
     try {
-      assertRequiredInputs(step.input_required, runState.context);
-      const resolvedInput = resolveTemplate(step.input, runState.context);
+      assertRequiredInputs(step.requires.inputs, runState.context);
+
+      // Load prompt from file if specified
+      const fileContent = step.prompt_file
+        ? await loadPromptFile(runState.workflow_path, step.prompt_file)
+        : undefined;
+
+      // Compose file + inline prompt
+      const rawPrompt = composePrompt(fileContent, step.prompt);
+
+      // Resolve template variables on the full composed prompt
+      const resolvedPrompt = resolveTemplate(rawPrompt, runState.context);
+
+      // Inject optional hint on first iteration of a continue
       const injectedHint =
         isFirstIteration && typeof options.overrides?.hint === "string"
           ? options.overrides.hint.trim()
           : "";
-      const renderedInput = injectedHint
-        ? `${resolvedInput}\n\nNote: ${injectedHint}`
-        : resolvedInput;
-      const agentPrompt = await loadAgentPrompt(runState.workflow_path, agent.prompt);
-      const prompt = composePrompt(agentPrompt, renderedInput);
+      const prompt = injectedHint
+        ? `${resolvedPrompt}\n\nNote: ${injectedHint}`
+        : resolvedPrompt;
 
-      const harness = options.overrides?.harness ?? agent.harness;
+      const harness = step.harness;
       const adapter = getHarnessAdapter(harness);
-      const effectiveModel = options.overrides?.model ?? agent.model;
+      const effectiveModel = step.model;
       const adapterOptions =
         typeof effectiveModel === "string"
           ? { allowAll: options.allowAll, model: effectiveModel }
           : { allowAll: options.allowAll };
 
-      ui.stepStart(stepNumber, step.id, agent.id, harness, effectiveModel);
+      ui.stepStart(stepNumber, step.id, harness, effectiveModel);
 
       // Only carry over session id when the harness hasn't changed.
       // A claude session id is meaningless to codex (and vice versa).
@@ -229,7 +225,7 @@ export async function runWorkflow(
       let stepOutput;
       try {
         stepOutput = parseRmrOutput(result.combinedOutput);
-        validateRequiredOutputKeys(stepOutput, step.outputs.required);
+        validateRequiredOutputKeys(stepOutput, step.requires.outputs);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to parse step output.";
         await pauseRun(
@@ -245,7 +241,7 @@ export async function runWorkflow(
       ui.stepOutputs(stepOutput.values);
       applyOutputToContext(runState.context, step.id, stepOutput.values);
 
-      const nextState = stepOutput.next_state ?? step.default_next;
+      const nextState = stepOutput.next_state ?? step.next_step;
       if (!isValidTarget(workflow, nextState)) {
         await pauseRun(
           config,
@@ -272,7 +268,6 @@ export async function runWorkflow(
       const stepExecution: StepExecution = {
         step_number: stepNumber,
         step_id: step.id,
-        agent_id: agent.id,
         session_id: runState.last_harness?.session_id ?? null,
         started_at: stepStartedAt,
         completed_at: new Date().toISOString()
@@ -299,7 +294,7 @@ export async function runWorkflow(
         config,
         runState,
         `${reason} (step "${step.id}")`,
-        options.overrides?.harness ?? agent.harness,
+        step.harness,
         runState.last_harness?.session_id ?? null
       );
       return runState;

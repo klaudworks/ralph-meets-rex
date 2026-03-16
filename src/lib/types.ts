@@ -1,46 +1,26 @@
-import { UserInputError } from "./errors";
-
 export type HarnessName = "claude" | "opencode" | "codex" | "copilot";
 
 export const HARNESSES: HarnessName[] = ["claude", "opencode", "codex", "copilot"];
 
-export function parseHarnessOverride(value: string | undefined): HarnessName | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  if (!HARNESSES.includes(value as HarnessName)) {
-    throw new UserInputError(
-      `Invalid harness override "${value}". Expected one of: ${HARNESSES.join(", ")}.`
-    );
-  }
-
-  return value as HarnessName;
-}
-
-export interface WorkflowAgent {
-  id: string;
-  harness: HarnessName;
-  prompt: string;
-  model?: string;
-}
-
 export interface WorkflowStep {
   id: string;
-  agent: string;
-  default_next: string;
-  input_required: string[];
-  outputs: {
-    required: string[];
+  prompt_file?: string;
+  prompt?: string;
+  harness: HarnessName;
+  model?: string;
+  next_step: string;
+  requires: {
+    inputs: string[];
+    outputs: string[];
   };
-  input: string;
 }
 
 export interface WorkflowDefinition {
   id: string;
   name: string;
   version?: string;
-  agents: WorkflowAgent[];
+  harness?: HarnessName;
+  model?: string;
   steps: WorkflowStep[];
 }
 
@@ -53,7 +33,6 @@ export interface LastHarnessState {
 export interface StepExecution {
   step_number: number;
   step_id: string;
-  agent_id: string;
   session_id: string | null;
   started_at: string;
   completed_at: string;

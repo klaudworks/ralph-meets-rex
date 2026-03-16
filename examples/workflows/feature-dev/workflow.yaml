@@ -1,61 +1,34 @@
 # Feature development workflow for rmr.
-# Three agents: planner (research + plan), tackle (implement), review (verify).
-# The review step can loop back to implement or escalate to human intervention.
+# Three steps: plan (research + plan), implement, verify (review).
+# The verify step can loop back to implement or escalate to human intervention.
 #
-# Agent prompts are co-located with this workflow in the same folder.
-# Step inputs only pass dynamic context (variables from prior steps).
-# Variables reference step IDs: {{step_id.key}}
+# Prompt files are co-located with this workflow in the same folder.
+# Template variables reference step outputs: {{step_id.key}}
 #
-# Routing is controlled by <next_state> in agent output.
+# Routing is controlled by <rmr:next_state> in agent output.
 # The planner can reject a task by setting next_state=done.
 # The reviewer can request changes by setting next_state=implement.
 
 id: feature-dev
 name: Feature Development
-
-agents:
-  - id: planner
-    harness: claude
-    prompt: planner-agent.md
-
-  - id: developer
-    harness: claude
-    prompt: tackle-agent.md
-
-  - id: reviewer
-    harness: claude
-    prompt: review-agent.md
+harness: claude
 
 steps:
   - id: plan
-    agent: planner
-    default_next: implement
-    input_required: [task]
-    outputs:
-      required: []
-    input: |
-      Task: {{task}}
+    prompt_file: planner-agent.md
+    next_step: implement
+    requires:
+      inputs: [task]
 
   - id: implement
-    agent: developer
-    default_next: verify
-    input_required: [task, plan.plan]
-    outputs:
-      required: [summary]
-    input: |
-      Task: {{task}}
-      Plan: {{plan.plan}}
-      Reviewer feedback: {{verify.issues}}
+    prompt_file: tackle-agent.md
+    next_step: verify
+    requires:
+      inputs: [task, plan.plan]
+      outputs: [summary]
 
   - id: verify
-    agent: reviewer
-    default_next: done
-    input_required: [implement.summary]
-    outputs:
-      required: []
-    input: |
-      Task: {{task}}
-      Plan: {{plan.plan}}
-      Developer summary: {{implement.summary}}
-      Commit: {{implement.commit}}
-      Tests: {{implement.tests}}
+    prompt_file: review-agent.md
+    next_step: done
+    requires:
+      inputs: [implement.summary]

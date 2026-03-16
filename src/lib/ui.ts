@@ -170,13 +170,12 @@ export const ui = {
   stepStart(
     stepNumber: number,
     stepId: string,
-    agentId: string,
     harness: string,
     model?: string
   ): void {
     const line = isTTY ? "─" : "-";
     const corner = { tl: isTTY ? "┌" : "+", tr: isTTY ? "┐" : "+" };
-    const label = ` Step ${stepNumber}: ${stepId} (${agentId}) `;
+    const label = ` Step ${stepNumber}: ${stepId} `;
     const width = getBoxWidth();
     const remaining = Math.max(0, width - label.length - 2);
     const border = line.repeat(remaining);
