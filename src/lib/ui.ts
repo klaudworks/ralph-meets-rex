@@ -5,6 +5,7 @@
 
 import chalk from "chalk";
 import * as readline from "node:readline";
+import { binaryName } from "./binary-name";
 
 const isTTY = process.stdout.isTTY === true;
 
@@ -324,7 +325,7 @@ export const ui = {
     ui.warning(`Paused: ${info.reason}`);
     process.stderr.write("\n");
     process.stdout.write(isTTY ? chalk.dim("Resume workflow:\n") : "Resume workflow:\n");
-    process.stdout.write(`  rmr continue ${info.runId}\n`);
+    process.stdout.write(`  ${binaryName} continue ${info.runId}\n`);
     process.stdout.write("\n");
     process.stdout.write(isTTY ? chalk.dim("Resume agent session directly:\n") : "Resume agent session directly:\n");
     process.stdout.write(`  ${info.resumeCommand}\n`);

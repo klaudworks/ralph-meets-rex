@@ -1,10 +1,10 @@
 import { Command, Option } from "clipanion";
 
 import { BaseCommand } from "./base";
+import { binaryName } from "../lib/binary-name";
 import { loadConfig } from "../lib/config";
 import { loadRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
-import { parseHarnessOverride, type HarnessName } from "../lib/types";
 import { startUpdateCheck } from "../lib/update-check";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
 import { ui } from "../lib/ui";
@@ -25,8 +25,8 @@ export class ContinueCommand extends BaseCommand {
         "$0 continue 20260316-153210Z --hint \"Plan mode only: read and propose changes, do not edit files.\""
       ],
       [
-        "Force harness/session override",
-        "$0 continue 20260316-153210Z --harness claude --session-id abc123"
+        "Force session override",
+        "$0 continue 20260316-153210Z --session-id abc123"
       ]
     ]
   });
@@ -40,11 +40,6 @@ export class ContinueCommand extends BaseCommand {
     description: "Override current step id before resuming."
   });
 
-  public readonly harness = Option.String("--harness", {
-    required: false,
-    description: "Override harness for the resumed step."
-  });
-
   public readonly sessionId = Option.String("--session-id", {
     required: false,
     description: "Force harness session id for resume attempt."
@@ -53,11 +48,6 @@ export class ContinueCommand extends BaseCommand {
   public readonly hint = Option.String("--hint", {
     required: false,
     description: "Inject a one-time hint into the resumed harness prompt."
-  });
-
-  public readonly model = Option.String("--model", {
-    required: false,
-    description: "Override model for the resumed step (e.g., openai/gpt-5.3-codex-high)."
   });
 
   public readonly allowAll = Option.Boolean("--allow-all", true, {
@@ -73,7 +63,6 @@ export class ContinueCommand extends BaseCommand {
     const config = await loadConfig();
     const runState = await loadRunState(config, this.runId);
     const workflow = await loadWorkflowDefinition(runState.workflow_path);
-    const harnessOverride = parseHarnessOverride(this.harness);
 
     runState.status = "running";
     if (this.step) {
@@ -83,7 +72,7 @@ export class ContinueCommand extends BaseCommand {
     const effectiveAllowAll = this.noAllowAll ? false : this.allowAll;
 
     ui.workflowHeader({
-      title: "rmr continue",
+      title: `${binaryName} continue`,
       workflow: runState.workflow_path,
       workflowId: workflow.id,
       task: runState.context["task"] ?? "(continuing)",
@@ -95,26 +84,18 @@ export class ContinueCommand extends BaseCommand {
 
     const overrides: {
       stepId?: string;
-      harness?: HarnessName;
       sessionId?: string;
       hint?: string;
-      model?: string;
     } = {};
 
     if (this.step) {
       overrides.stepId = this.step;
-    }
-    if (harnessOverride) {
-      overrides.harness = harnessOverride;
     }
     if (this.sessionId) {
       overrides.sessionId = this.sessionId;
     }
     if (this.hint && this.hint.trim() !== "") {
       overrides.hint = this.hint;
-    }
-    if (this.model) {
-      overrides.model = this.model;
     }
 
     await runWorkflow(config, workflow, runState, {

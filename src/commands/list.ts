@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { Command } from "clipanion";
 import { BaseCommand } from "./base";
+import { binaryName } from "../lib/binary-name";
 import { loadConfig } from "../lib/config";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
 import { ui } from "../lib/ui";
@@ -128,14 +129,14 @@ export class ListCommand extends BaseCommand {
     if (available.length > 0) {
       ui.info("Available to install:");
       for (const workflow of available) {
-        ui.info(`  ${workflow.id.padEnd(16)} rmr install ${workflow.path}`);
+        ui.info(`  ${workflow.id.padEnd(16)} ${binaryName} install ${workflow.path}`);
       }
       ui.info("");
     }
 
     if (installed.length === 0 && bundled.length > 0) {
       ui.info("No workflows installed yet. Install one with:");
-      ui.info(`  rmr install ${bundled[0]?.path}`);
+      ui.info(`  ${binaryName} install ${bundled[0]?.path}`);
       ui.info("");
     }
 

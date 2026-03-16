@@ -10,12 +10,13 @@ import { RootCommand } from "./commands/root";
 import { RmrError } from "./lib/errors";
 import { logger } from "./lib/logger";
 import { RunCommand } from "./commands/run";
+import { binaryName } from "./lib/binary-name";
 import { getVersion } from "./lib/version";
 
 const [, , ...args] = process.argv;
 
 const cli = new Cli({
-  binaryName: "rmr",
+  binaryName,
   binaryVersion: getVersion(),
   enableColors: false
 });

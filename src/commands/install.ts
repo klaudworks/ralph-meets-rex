@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { Command, Option } from "clipanion";
 
 import { BaseCommand } from "./base";
+import { binaryName } from "../lib/binary-name";
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
 import { ui } from "../lib/ui";
@@ -62,14 +63,18 @@ export class InstallCommand extends BaseCommand {
 
     if (existsSync(destinationDir)) {
       ui.info(`Workflow already installed at .rmr/workflows/${this.workflowName}/`);
-      ui.info(`Run it with: rmr run .rmr/workflows/${this.workflowName}/workflow.yaml --task "Describe your task"`);
+      ui.info(
+        `Run it with: ${binaryName} run .rmr/workflows/${this.workflowName}/workflow.yaml --task "Describe your task"`
+      );
       return 0;
     }
 
     await cp(sourceDir, destinationDir, { recursive: true, force: false, errorOnExist: true });
 
     ui.success(`installed .rmr/workflows/${this.workflowName}/`);
-    ui.info(`Run it with: rmr run .rmr/workflows/${this.workflowName}/workflow.yaml --task \"Describe your task\"`);
+    ui.info(
+      `Run it with: ${binaryName} run .rmr/workflows/${this.workflowName}/workflow.yaml --task "Describe your task"`
+    );
     return 0;
   }
 }

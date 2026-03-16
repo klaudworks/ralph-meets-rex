@@ -1,6 +1,7 @@
 import { Command, Option } from "clipanion";
 
 import { BaseCommand } from "./base";
+import { binaryName } from "../lib/binary-name";
 import { UserInputError } from "../lib/errors";
 
 type ShellName = "bash" | "zsh" | "fish";
@@ -27,12 +28,12 @@ function bashScript(): string {
     "  fi",
     "",
     "  if [[ \"${prev}\" == \"continue\" ]]; then",
-    "    COMPREPLY=( $(rmr complete run-id \"${cur}\") )",
+    `    COMPREPLY=( $(${binaryName} complete run-id "\${cur}") )`,
     "    return 0",
     "  fi",
     "",
     "  if [[ \"${prev}\" == \"run\" ]]; then",
-    "    COMPREPLY=( $(rmr complete workflow \"${cur}\") )",
+    `    COMPREPLY=( $(${binaryName} complete workflow "\${cur}") )`,
     "    return 0",
     "  fi",
     "",
@@ -41,13 +42,13 @@ function bashScript(): string {
     "    return 0",
     "  fi",
     "}",
-    "complete -F _rex_complete rmr"
+    `complete -F _rex_complete ${binaryName}`
   ].join("\n");
 }
 
 function zshScript(): string {
   return [
-    "#compdef rmr",
+    `#compdef ${binaryName}`,
     "_rex_complete() {",
     "  local -a subcommands",
     "  subcommands=(install run continue complete completion)",
@@ -58,12 +59,12 @@ function zshScript(): string {
     "  fi",
     "",
     "  if [[ ${words[2]} == continue && $CURRENT -eq 3 ]]; then",
-    "    compadd -- $(rmr complete run-id \"${words[CURRENT]}\")",
+    `    compadd -- $(${binaryName} complete run-id "\${words[CURRENT]}")`,
     "    return",
     "  fi",
     "",
     "  if [[ ${words[2]} == run && $CURRENT -eq 3 ]]; then",
-    "    compadd -- $(rmr complete workflow \"${words[CURRENT]}\")",
+    `    compadd -- $(${binaryName} complete workflow "\${words[CURRENT]}")`,
     "    return",
     "  fi",
     "",
@@ -72,25 +73,25 @@ function zshScript(): string {
     "    return",
     "  fi",
     "}",
-    "compdef _rex_complete rmr"
+    `compdef _rex_complete ${binaryName}`
   ].join("\n");
 }
 
 function fishScript(): string {
   return [
     "function __rex_complete_run_id",
-    "  rmr complete run-id (commandline -ct)",
+    `  ${binaryName} complete run-id (commandline -ct)`,
     "end",
     "",
     "function __rex_complete_workflow",
-    "  rmr complete workflow (commandline -ct)",
+    `  ${binaryName} complete workflow (commandline -ct)`,
     "end",
     "",
-    "complete -c rmr -f",
-    "complete -c rmr -n '__fish_use_subcommand' -a 'install run continue complete completion'",
-    "complete -c rmr -n '__fish_seen_subcommand_from continue' -a '(__rex_complete_run_id)'",
-    "complete -c rmr -n '__fish_seen_subcommand_from run' -a '(__rex_complete_workflow)'",
-    "complete -c rmr -n '__fish_seen_subcommand_from install' -a 'feature-dev'"
+    `complete -c ${binaryName} -f`,
+    `complete -c ${binaryName} -n '__fish_use_subcommand' -a 'install run continue complete completion'`,
+    `complete -c ${binaryName} -n '__fish_seen_subcommand_from continue' -a '(__rex_complete_run_id)'`,
+    `complete -c ${binaryName} -n '__fish_seen_subcommand_from run' -a '(__rex_complete_workflow)'`,
+    `complete -c ${binaryName} -n '__fish_seen_subcommand_from install' -a 'feature-dev'`
   ].join("\n");
 }
 

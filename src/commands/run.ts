@@ -3,6 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { BaseCommand } from "./base";
+import { binaryName } from "../lib/binary-name";
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
 import { parseHarnessOverride, type HarnessName } from "../lib/types";
@@ -241,7 +242,7 @@ export class RunCommand extends BaseCommand {
     const runPath = await saveRunState(config, runState);
 
     ui.workflowHeader({
-      title: "rmr config",
+      title: `${binaryName} config`,
       workflow: workflowPath,
       workflowId: workflow.id,
       task: displayTask,
