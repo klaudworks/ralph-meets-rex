@@ -10,10 +10,11 @@ import { UserInputError } from "../lib/errors";
 import { ui } from "../lib/ui";
 
 function getExamplesWorkflowsDir(): string {
-  const thisFile = typeof __filename !== "undefined" ? __filename : fileURLToPath(import.meta.url);
-  const thisDir = dirname(thisFile);
+  const thisDir = dirname(fileURLToPath(import.meta.url));
 
+  // When running from dist/index.js (npm install), examples/ is a sibling of dist/
   const fromDist = resolve(thisDir, "..", "examples", "workflows");
+  // When running from src/ during development (bun run src/index.ts)
   const fromSrc = resolve(thisDir, "..", "..", "examples", "workflows");
 
   if (existsSync(fromDist)) return fromDist;
@@ -59,7 +60,9 @@ export class InstallCommand extends Command {
     }
 
     if (existsSync(destinationDir)) {
-      throw new UserInputError(`Workflow already installed at ${destinationDir}.`);
+      ui.info(`Workflow already installed at .rmr/workflows/${this.workflowName}/`);
+      ui.info(`Run it with: rmr run .rmr/workflows/${this.workflowName}/workflow.yaml --task "Describe your task"`);
+      return 0;
     }
 
     await cp(sourceDir, destinationDir, { recursive: true, force: false, errorOnExist: true });
