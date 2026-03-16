@@ -149,7 +149,7 @@ export async function runWorkflow(
         session_id: selectedSessionId ?? null
       };
 
-      const result = await runProviderCommand(command, adapter.parseStreamLine);
+      const result = await runProviderCommand(command, adapter.createStreamParser());
       if (result.sessionId) {
         runState.last_provider.session_id = result.sessionId;
       }

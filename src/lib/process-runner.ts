@@ -38,8 +38,33 @@ async function consumeStream(
 }
 
 /**
+ * Format tool input for display, extracting key parameters.
+ */
+function formatToolInput(toolInput: string): string {
+  try {
+    const parsed = JSON.parse(toolInput);
+    // Show key parameters in a compact form
+    const entries = Object.entries(parsed);
+    if (entries.length === 0) {
+      return "";
+    }
+    // Format as key=value pairs
+    const parts = entries.map(([key, value]) => {
+      const strValue = typeof value === "string" ? value : JSON.stringify(value);
+      // Truncate long values
+      const truncated = strValue.length > 60 ? strValue.slice(0, 57) + "..." : strValue;
+      return `${key}=${truncated}`;
+    });
+    return parts.join(" ");
+  } catch {
+    // If not valid JSON, return as-is (truncated)
+    return toolInput.length > 100 ? toolInput.slice(0, 97) + "..." : toolInput;
+  }
+}
+
+/**
  * Consume a stream line-by-line, parsing each line with the given parser.
- * Displays text deltas in real-time and a compact tool summary.
+ * Displays tool calls with inputs in real-time.
  * Returns the accumulated display text and any session ID found.
  */
 async function consumeStreamParsed(
@@ -58,25 +83,7 @@ async function consumeStreamParsed(
   let lineBuf = "";
 
   const toolCounts = new Map<string, number>();
-  let toolLineActive = false;
   let lastTextWasContent = false;
-
-  function printToolLine() {
-    if (toolCounts.size === 0) {
-      return;
-    }
-
-    const summary = ui.toolSummary(toolCounts);
-    if (toolLineActive) {
-      ui.printToolLine(summary, true);
-    } else {
-      if (lastTextWasContent) {
-        process.stderr.write("\n");
-      }
-      ui.printToolLine(summary, false);
-      toolLineActive = true;
-    }
-  }
 
   function processLine(line: string) {
     const parsed = parser(line);
@@ -85,15 +92,21 @@ async function consumeStreamParsed(
     }
 
     if (parsed.toolName) {
+      // Count the tool
       toolCounts.set(parsed.toolName, (toolCounts.get(parsed.toolName) ?? 0) + 1);
-      printToolLine();
+
+      // Add newline separator if we were outputting content
+      if (lastTextWasContent) {
+        process.stderr.write("\n");
+        lastTextWasContent = false;
+      }
+
+      // Display the tool call with its input
+      const inputDisplay = parsed.toolInput ? formatToolInput(parsed.toolInput) : "";
+      ui.printToolCall(parsed.toolName, inputDisplay);
     }
 
     if (parsed.text) {
-      if (toolLineActive) {
-        ui.clearToolLine();
-        toolLineActive = false;
-      }
       displayText += parsed.text;
       ui.content(parsed.text);
       lastTextWasContent = true;
@@ -130,12 +143,8 @@ async function consumeStreamParsed(
 
   // Print final tool summary if tools were used
   if (toolCounts.size > 0) {
-    if (!toolLineActive) {
-      if (lastTextWasContent) {
-        process.stderr.write("\n");
-      }
-    } else {
-      ui.clearToolLine();
+    if (lastTextWasContent) {
+      process.stderr.write("\n");
     }
     const summary = ui.toolSummary(toolCounts);
     ui.printToolLine(summary, false);
@@ -161,6 +170,15 @@ export async function runProviderCommand(
     throw new StorageError(`Failed to launch provider binary "${command.binary}".`);
   }
 
+  // Trap SIGINT while the child is running so Rex survives Ctrl+C.
+  // The signal still reaches the child (same process group), which will
+  // exit with a non-zero code that the runner handles via pauseRun().
+  let interrupted = false;
+  const onSigint = () => {
+    interrupted = true;
+  };
+  process.on("SIGINT", onSigint);
+
   // All providers now use the unified stream parsing path
   const stdoutPromise = consumeStreamParsed(processRef.stdout, parseStreamLine);
   const stderrPromise = consumeStream(processRef.stderr, (chunk) => {
@@ -173,8 +191,11 @@ export async function runProviderCommand(
     stderrPromise
   ]);
 
+  // Restore default SIGINT behaviour after child exits.
+  process.removeListener("SIGINT", onSigint);
+
   return {
-    exitCode,
+    exitCode: interrupted && exitCode === 0 ? 130 : exitCode,
     stdout: stdoutResult.displayText,
     stderr,
     combinedOutput: `${stdoutResult.displayText}${stderr}`,
