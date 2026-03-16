@@ -4,6 +4,7 @@ import { loadConfig } from "../lib/config";
 import { loadRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
 import { parseHarnessOverride, type HarnessName } from "../lib/types";
+import { startUpdateCheck } from "../lib/update-check";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
 import { ui } from "../lib/ui";
 
@@ -54,6 +55,7 @@ export class ContinueCommand extends Command {
   });
 
   public async execute(): Promise<number> {
+    const showUpdateNotice = startUpdateCheck();
     const config = await loadConfig();
     const runState = await loadRunState(config, this.runId);
     const workflow = await loadWorkflowDefinition(runState.workflow_path);
@@ -102,6 +104,7 @@ export class ContinueCommand extends Command {
       overrides
     });
 
+    showUpdateNotice();
     return 0;
   }
 }
