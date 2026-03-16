@@ -2,6 +2,7 @@
   "name": "@klaudworks/rmr",
   "version": "0.4.5",
   "description": "Define multi-step coding workflows for AI agents",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/klaudworks/ralph-meets-rex"
