@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { Builtins, Cli } from "clipanion";
 
 import { CompleteCommand } from "./commands/complete";

@@ -8,6 +8,8 @@ Define multi-step coding workflows that match how you actually work. `rmr` orche
 
 ```bash
 npm install -g @klaudworks/rmr
+
+# run from the root of your project
 rmr install feature-dev
 rmr run .rmr/workflows/feature-dev/workflow.yaml --task "Implement feature X"
 ```
