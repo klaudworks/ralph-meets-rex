@@ -27,9 +27,9 @@ export class InstallCommand extends Command {
 
   public static usage = Command.Usage({
     category: "Setup",
-    description: "Install a bundled workflow into .rex/workflows/.",
+    description: "Install a bundled workflow into .rmr/workflows/.",
     details:
-      "Copies a workflow folder from bundled examples into `.rex/workflows/<name>/`. Creates `.rex/` and `.rex/workflows/` if needed.",
+      "Copies a workflow folder from bundled examples into `.rmr/workflows/<name>/`. Creates `.rmr/` and `.rmr/workflows/` if needed.",
     examples: [["Install feature-dev workflow", "$0 install feature-dev"]]
   });
 
@@ -64,8 +64,8 @@ export class InstallCommand extends Command {
 
     await cp(sourceDir, destinationDir, { recursive: true, force: false, errorOnExist: true });
 
-    ui.success(`installed .rex/workflows/${this.workflowName}/`);
-    ui.info(`Run it with: rex run .rex/workflows/${this.workflowName}/workflow.yaml --task \"Describe your task\"`);
+    ui.success(`installed .rmr/workflows/${this.workflowName}/`);
+    ui.info(`Run it with: rmr run .rmr/workflows/${this.workflowName}/workflow.yaml --task \"Describe your task\"`);
     return 0;
   }
 }

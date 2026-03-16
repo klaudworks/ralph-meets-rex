@@ -23,29 +23,29 @@ export class RootCommand extends Command {
   public async execute(): Promise<number> {
     const shell = detectShell();
 
-    process.stdout.write("rex - workflow orchestrator\n\n");
+    process.stdout.write("rmr - multi-step coding workflows for AI agents\n\n");
     process.stdout.write("Setup\n");
-    process.stdout.write("  rex install <name>      Install bundled workflow into .rex/workflows/\n\n");
+    process.stdout.write("  rmr install <name>      Install bundled workflow into .rmr/workflows/\n\n");
     process.stdout.write("Workflow\n");
-    process.stdout.write("  rex run <workflow-path>  Start a new workflow run (requires --task/-t or --task-file/-f)\n");
-    process.stdout.write("  rex continue <run-id>   Resume a paused or interrupted run\n\n");
+    process.stdout.write("  rmr run <workflow-path>  Start a new workflow run (requires --task/-t or --task-file/-f)\n");
+    process.stdout.write("  rmr continue <run-id>   Resume a paused or interrupted run\n\n");
 
     process.stdout.write("Shell Completion (optional)\n");
     if (shell === "fish") {
-      process.stdout.write("  rex completion fish > ~/.config/fish/completions/rex.fish\n\n");
+      process.stdout.write("  rmr completion fish > ~/.config/fish/completions/rmr.fish\n\n");
     } else if (shell) {
       const rcFile = shell === "zsh" ? "~/.zshrc" : "~/.bashrc";
-      process.stdout.write(`  echo 'eval "$(rex completion ${shell})"' >> ${rcFile}\n`);
+      process.stdout.write(`  echo 'eval "$(rmr completion ${shell})"' >> ${rcFile}\n`);
       process.stdout.write(`  source ${rcFile}\n\n`);
     } else {
-      process.stdout.write("  echo 'eval \"$(rex completion zsh)\"' >> ~/.zshrc && source ~/.zshrc\n");
-      process.stdout.write("  echo 'eval \"$(rex completion bash)\"' >> ~/.bashrc && source ~/.bashrc\n");
-      process.stdout.write("  rex completion fish > ~/.config/fish/completions/rex.fish\n\n");
+      process.stdout.write("  echo 'eval \"$(rmr completion zsh)\"' >> ~/.zshrc && source ~/.zshrc\n");
+      process.stdout.write("  echo 'eval \"$(rmr completion bash)\"' >> ~/.bashrc && source ~/.bashrc\n");
+      process.stdout.write("  rmr completion fish > ~/.config/fish/completions/rmr.fish\n\n");
     }
 
     process.stdout.write("More\n");
-    process.stdout.write("  rex --help              Show full help with all options\n");
-    process.stdout.write("  rex <command> --help    Show help for a specific command\n");
+    process.stdout.write("  rmr --help              Show full help with all options\n");
+    process.stdout.write("  rmr <command> --help    Show help for a specific command\n");
 
     return 0;
   }

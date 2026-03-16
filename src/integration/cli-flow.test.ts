@@ -34,35 +34,35 @@ function parseRunId(output: string): string {
 }
 
 describe("cli integration", () => {
-  test("install copies bundled workflow into .rex/workflows", async () => {
-    const root = await mkdtemp(resolve(tmpdir(), "rex-cli-"));
+  test("install copies bundled workflow into .rmr/workflows", async () => {
+    const root = await mkdtemp(resolve(tmpdir(), "rmr-cli-"));
 
     const result = await runCli(["install", "feature-dev"], root, {
       ...process.env
     } as Record<string, string>);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("installed .rex/workflows/feature-dev/");
+    expect(result.stdout).toContain("installed .rmr/workflows/feature-dev/");
 
     const installedWorkflow = await readFile(
-      resolve(root, ".rex", "workflows", "feature-dev", "workflow.yaml"),
+      resolve(root, ".rmr", "workflows", "feature-dev", "workflow.yaml"),
       "utf8"
     );
     expect(installedWorkflow).toContain("id: feature-dev");
   });
 
   test("run reaches done and writes done state", async () => {
-    const root = await mkdtemp(resolve(tmpdir(), "rex-cli-"));
+    const root = await mkdtemp(resolve(tmpdir(), "rmr-cli-"));
     const fakeBinDir = resolve(root, "fake-bin");
 
-    await mkdir(resolve(root, ".rex", "workflows"), { recursive: true });
+    await mkdir(resolve(root, ".rmr", "workflows"), { recursive: true });
     await mkdir(fakeBinDir, { recursive: true });
 
     const workflowPath = resolve(root, "workflow.yml");
     await writeFile(resolve(root, "worker.md"), "You are worker", "utf8");
     await writeFile(
       workflowPath,
-      `id: quick-task\nname: Quick Task\nagents:\n  - id: worker\n    provider: claude\n    prompt: worker.md\nsteps:\n  - id: execute\n    agent: worker\n    default_next: done\n    input_required: [task]\n    outputs:\n      required: [result]\n    input: |\n      Do {{task}}\n`,
+      `id: quick-task\nname: Quick Task\nagents:\n  - id: worker\n    harness: claude\n    prompt: worker.md\nsteps:\n  - id: execute\n    agent: worker\n    default_next: done\n    input_required: [task]\n    outputs:\n      required: [result]\n    input: |\n      Do {{task}}\n`,
       "utf8"
     );
 
@@ -71,7 +71,7 @@ describe("cli integration", () => {
       fakeClaude,
       `#!/bin/sh
 echo '{"type":"system","subtype":"init","session_id":"fake-session-1"}'
-echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rex:status>done</rex:status><rex:next_state>done</rex:next_state><rex:result>ok</rex:result>"}},"session_id":"fake-session-1"}'
+echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rmr:status>done</rmr:status><rmr:next_state>done</rmr:next_state><rmr:result>ok</rmr:result>"}},"session_id":"fake-session-1"}'
 echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result":"ok"}'
 `,
       "utf8"
@@ -87,7 +87,7 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
     expect(result.stdout).toContain("Run completed");
 
     const runId = parseRunId(result.stdout);
-    const runFile = resolve(root, ".rex", "runs", `${runId}.json`);
+    const runFile = resolve(root, ".rmr", "runs", `${runId}.json`);
     const persisted = JSON.parse(await readFile(runFile, "utf8")) as {
       status: string;
       current_step: string;
@@ -100,17 +100,17 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
   });
 
   test("run pauses and continue resumes", async () => {
-    const root = await mkdtemp(resolve(tmpdir(), "rex-cli-"));
+    const root = await mkdtemp(resolve(tmpdir(), "rmr-cli-"));
     const fakeBinDir = resolve(root, "fake-bin");
 
-    await mkdir(resolve(root, ".rex", "workflows"), { recursive: true });
+    await mkdir(resolve(root, ".rmr", "workflows"), { recursive: true });
     await mkdir(fakeBinDir, { recursive: true });
 
     const workflowPath = resolve(root, "workflow.yml");
     await writeFile(resolve(root, "worker.md"), "You are worker", "utf8");
     await writeFile(
       workflowPath,
-      `id: quick-task\nname: Quick Task\nagents:\n  - id: worker\n    provider: claude\n    prompt: worker.md\nsteps:\n  - id: execute\n    agent: worker\n    default_next: done\n    input_required: [task]\n    outputs:\n      required: [result]\n    input: |\n      Do {{task}}\n`,
+      `id: quick-task\nname: Quick Task\nagents:\n  - id: worker\n    harness: claude\n    prompt: worker.md\nsteps:\n  - id: execute\n    agent: worker\n    default_next: done\n    input_required: [task]\n    outputs:\n      required: [result]\n    input: |\n      Do {{task}}\n`,
       "utf8"
     );
 
@@ -120,12 +120,12 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
       `#!/bin/sh
 if [ "$CLAUDE_MODE" = "pause" ]; then
   echo '{"type":"system","subtype":"init","session_id":"fake-session-1"}'
-  echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rex:status>human_intervention_required</rex:status><rex:next_state>human_intervention</rex:next_state><rex:result>pending</rex:result>"}},"session_id":"fake-session-1"}'
+  echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rmr:status>human_intervention_required</rmr:status><rmr:next_state>human_intervention</rmr:next_state><rmr:result>pending</rmr:result>"}},"session_id":"fake-session-1"}'
   echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"\nHUMAN_INTERVENTION_REQUIRED\n"}},"session_id":"fake-session-1"}'
   echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result":"ok"}'
 else
   echo '{"type":"system","subtype":"init","session_id":"fake-session-2"}'
-  echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rex:status>done</rex:status><rex:next_state>done</rex:next_state><rex:result>ok</rex:result>"}},"session_id":"fake-session-2"}'
+  echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rmr:status>done</rmr:status><rmr:next_state>done</rmr:next_state><rmr:result>ok</rmr:result>"}},"session_id":"fake-session-2"}'
   echo '{"type":"result","subtype":"success","session_id":"fake-session-2","result":"ok"}'
 fi
 `,

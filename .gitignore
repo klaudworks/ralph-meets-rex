@@ -5,9 +5,7 @@ node_modules/
 dist/
 
 # local runtime artifacts
-.rex/
-!.rex/agents/
-!.rex/workflows/
+.rmr/
 
 # package artifacts
 *.tgz

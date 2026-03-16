@@ -1,7 +1,7 @@
 {
-  "name": "@klaudworks/rex",
-  "version": "0.3.1",
-  "description": "State-machine workflow orchestrator CLI",
+  "name": "@klaudworks/rmr",
+  "version": "0.4.0",
+  "description": "Define multi-step coding workflows for AI agents",
   "repository": {
     "type": "git",
     "url": "https://github.com/klaudworks/ralph-meets-rex"
@@ -14,7 +14,7 @@
     "README.md"
   ],
   "bin": {
-    "rex": "dist/index.js"
+    "rmr": "dist/index.js"
   },
   "publishConfig": {
     "access": "public"

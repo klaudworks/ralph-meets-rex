@@ -1,4 +1,4 @@
-# Feature development workflow for Rex.
+# Feature development workflow for rmr.
 # Three agents: planner (research + plan), tackle (implement), review (verify).
 # The review step can loop back to implement or escalate to human intervention.
 #
@@ -15,15 +15,15 @@ name: Feature Development
 
 agents:
   - id: planner
-    provider: claude
+    harness: claude
     prompt: planner-agent.md
 
   - id: developer
-    provider: claude
+    harness: claude
     prompt: tackle-agent.md
 
   - id: reviewer
-    provider: claude
+    harness: claude
     prompt: review-agent.md
 
 steps:

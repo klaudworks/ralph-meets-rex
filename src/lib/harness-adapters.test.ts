@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { getProviderAdapter } from "./provider-adapters";
-import { PROVIDERS } from "./types";
+import { getHarnessAdapter } from "./harness-adapters";
+import { HARNESSES } from "./types";
 
-describe("provider adapters", () => {
+describe("harness adapters", () => {
   test("claude allow-all mapping", () => {
-    const adapter = getProviderAdapter("claude");
+    const adapter = getHarnessAdapter("claude");
     const command = adapter.buildRunCommand("hello", { allowAll: true });
     expect(command.binary).toBe("claude");
     expect(command.args).toContain("--dangerously-skip-permissions");
@@ -13,38 +13,38 @@ describe("provider adapters", () => {
   });
 
   test("codex no-allow-all mapping", () => {
-    const adapter = getProviderAdapter("codex");
+    const adapter = getHarnessAdapter("codex");
     const command = adapter.buildRunCommand("hello", { allowAll: false });
     expect(command.args).not.toContain("--full-auto");
     expect(command.args[0]).toBe("exec");
   });
 
-  test("resume templates render by provider", () => {
-    expect(getProviderAdapter("claude").resumeTemplate("abc")).toBe("claude --resume abc");
-    expect(getProviderAdapter("opencode").resumeTemplate("abc")).toBe("opencode --resume abc");
-    expect(getProviderAdapter("codex").resumeTemplate("abc")).toContain("codex exec resume abc");
+  test("resume templates render by harness", () => {
+    expect(getHarnessAdapter("claude").resumeTemplate("abc")).toBe("claude --resume abc");
+    expect(getHarnessAdapter("opencode").resumeTemplate("abc")).toBe("opencode --resume abc");
+    expect(getHarnessAdapter("codex").resumeTemplate("abc")).toContain("codex exec resume abc");
   });
 
-  test("unknown provider throws", () => {
-    expect(() => getProviderAdapter("unknown")).toThrow('Unknown provider "unknown".');
+  test("unknown harness throws", () => {
+    expect(() => getHarnessAdapter("unknown")).toThrow('Unknown harness "unknown".');
   });
 
-  test("all providers have createStreamParser function", () => {
-    for (const provider of PROVIDERS) {
-      const adapter = getProviderAdapter(provider);
+  test("all harnesses have createStreamParser function", () => {
+    for (const harness of HARNESSES) {
+      const adapter = getHarnessAdapter(harness);
       expect(typeof adapter.createStreamParser).toBe("function");
     }
   });
 
   test("passthrough parser returns line with newline", () => {
-    const adapter = getProviderAdapter("opencode");
+    const adapter = getHarnessAdapter("opencode");
     const parser = adapter.createStreamParser();
     const result = parser("hello world");
     expect(result).toEqual({ text: "hello world\n" });
   });
 
   test("claude parser extracts text delta", () => {
-    const adapter = getProviderAdapter("claude");
+    const adapter = getHarnessAdapter("claude");
     const parser = adapter.createStreamParser();
     const line = JSON.stringify({
       type: "stream_event",
@@ -59,7 +59,7 @@ describe("provider adapters", () => {
   });
 
   test("claude parser extracts tool name and input on block stop", () => {
-    const adapter = getProviderAdapter("claude");
+    const adapter = getHarnessAdapter("claude");
     const parser = adapter.createStreamParser();
 
     // Start the tool block

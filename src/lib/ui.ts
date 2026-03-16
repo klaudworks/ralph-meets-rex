@@ -81,7 +81,7 @@ export const ui = {
     currentStep: string;
     runFile: string;
     allowAll: boolean;
-    provider?: string | undefined;
+    harness?: string | undefined;
     model?: string | undefined;
     varsCount: number;
   }): void {
@@ -201,7 +201,7 @@ export const ui = {
   },
 
   /**
-   * Print detected rex: output tags after a step completes.
+   * Print detected rmr: output tags after a step completes.
    */
   stepOutputs(values: Record<string, string>): void {
     const entries = Object.entries(values);
@@ -215,7 +215,7 @@ export const ui = {
 
     process.stdout.write("\n");
     for (const [key, value] of entries) {
-      const label = `rex:${key}`;
+      const label = `rmr:${key}`;
       const firstLineIndent = labelPrefix.length + label.length + separator.length;
       const continuationIndent = " ".repeat(firstLineIndent);
       const maxValueWidth = width - firstLineIndent;
@@ -317,7 +317,7 @@ export const ui = {
     ui.warning(`Paused: ${info.reason}`);
     process.stderr.write("\n");
     process.stdout.write(isTTY ? chalk.dim("Resume workflow:\n") : "Resume workflow:\n");
-    process.stdout.write(`  rex continue ${info.runId}\n`);
+    process.stdout.write(`  rmr continue ${info.runId}\n`);
     process.stdout.write("\n");
     process.stdout.write(isTTY ? chalk.dim("Resume agent session directly:\n") : "Resume agent session directly:\n");
     process.stdout.write(`  ${info.resumeCommand}\n`);

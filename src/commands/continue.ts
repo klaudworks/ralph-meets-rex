@@ -3,7 +3,7 @@ import { Command, Option } from "clipanion";
 import { loadConfig } from "../lib/config";
 import { loadRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
-import { parseProviderOverride, type ProviderName } from "../lib/types";
+import { parseHarnessOverride, type HarnessName } from "../lib/types";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
 import { ui } from "../lib/ui";
 
@@ -14,7 +14,7 @@ export class ContinueCommand extends Command {
     category: "Workflow",
     description: "Resume a previously created run by run id.",
     details:
-      "Loads `.rex/runs/<run-id>.json` and continues orchestration from the stored step unless overridden. If a provider session id exists (or is provided), Rex attempts provider resume first.",
+      "Loads `.rmr/runs/<run-id>.json` and continues orchestration from the stored step unless overridden. If a harness session id exists (or is provided), rmr attempts harness resume first.",
     examples: [
       ["Resume a paused run", "$0 continue 20260316-153210Z"],
       ["Resume from a specific step", "$0 continue 20260316-153210Z --step verify"],
@@ -23,8 +23,8 @@ export class ContinueCommand extends Command {
         "$0 continue 20260316-153210Z --hint \"Plan mode only: read and propose changes, do not edit files.\""
       ],
       [
-        "Force provider/session override",
-        "$0 continue 20260316-153210Z --provider claude --session-id abc123"
+        "Force harness/session override",
+        "$0 continue 20260316-153210Z --harness claude --session-id abc123"
       ]
     ]
   });
@@ -38,26 +38,26 @@ export class ContinueCommand extends Command {
     description: "Override current step id before resuming."
   });
 
-  public readonly provider = Option.String("--provider", {
+  public readonly harness = Option.String("--harness", {
     required: false,
-    description: "Override provider for the resumed step."
+    description: "Override harness for the resumed step."
   });
 
   public readonly sessionId = Option.String("--session-id", {
     required: false,
-    description: "Force provider session id for resume attempt."
+    description: "Force harness session id for resume attempt."
   });
 
   public readonly hint = Option.String("--hint", {
     required: false,
-    description: "Inject a one-time hint into the resumed provider prompt."
+    description: "Inject a one-time hint into the resumed harness prompt."
   });
 
   public async execute(): Promise<number> {
     const config = await loadConfig();
     const runState = await loadRunState(config, this.runId);
     const workflow = await loadWorkflowDefinition(runState.workflow_path);
-    const providerOverride = parseProviderOverride(this.provider);
+    const harnessOverride = parseHarnessOverride(this.harness);
 
     runState.status = "running";
     if (this.step) {
@@ -65,7 +65,7 @@ export class ContinueCommand extends Command {
     }
 
     ui.workflowHeader({
-      title: "rex continue",
+      title: "rmr continue",
       workflow: runState.workflow_path,
       workflowId: workflow.id,
       task: runState.context["task"] ?? "(continuing)",
@@ -73,13 +73,13 @@ export class ContinueCommand extends Command {
       currentStep: runState.current_step,
       runFile: "",
       allowAll: true,
-      provider: this.provider,
+      harness: this.harness,
       varsCount: 0
     });
 
     const overrides: {
       stepId?: string;
-      provider?: ProviderName;
+      harness?: HarnessName;
       sessionId?: string;
       hint?: string;
     } = {};
@@ -87,8 +87,8 @@ export class ContinueCommand extends Command {
     if (this.step) {
       overrides.stepId = this.step;
     }
-    if (providerOverride) {
-      overrides.provider = providerOverride;
+    if (harnessOverride) {
+      overrides.harness = harnessOverride;
     }
     if (this.sessionId) {
       overrides.sessionId = this.sessionId;

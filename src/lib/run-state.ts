@@ -1,9 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import type { RexConfig } from "./config";
+import type { RmrConfig } from "./config";
 import { StorageError } from "./errors";
-import type { ProviderName, RunState, WorkflowDefinition } from "./types";
+import type { HarnessName, RunState, WorkflowDefinition } from "./types";
 
 function pad(input: number): string {
   return String(input).padStart(2, "0");
@@ -20,7 +20,7 @@ export function generateRunId(now = new Date()): string {
   return `${yyyy}${mm}${dd}-${hh}${min}${sec}Z`;
 }
 
-export function runFilePath(config: RexConfig, runId: string): string {
+export function runFilePath(config: RmrConfig, runId: string): string {
   return resolve(config.runsDir, `${runId}.json`);
 }
 
@@ -45,9 +45,9 @@ export function createInitialRunState(options: {
       task: options.task,
       ...options.vars
     },
-    last_provider: {
-      name: resolveProviderForStep(options.workflow, firstStep.agent),
-      binary: resolveProviderForStep(options.workflow, firstStep.agent),
+    last_harness: {
+      name: resolveHarnessForStep(options.workflow, firstStep.agent),
+      binary: resolveHarnessForStep(options.workflow, firstStep.agent),
       session_id: null
     },
     step_history: [],
@@ -55,16 +55,16 @@ export function createInitialRunState(options: {
   };
 }
 
-function resolveProviderForStep(workflow: WorkflowDefinition, stepAgentId: string): ProviderName {
+function resolveHarnessForStep(workflow: WorkflowDefinition, stepAgentId: string): HarnessName {
   const agent = workflow.agents.find((item) => item.id === stepAgentId);
   if (!agent) {
-    throw new StorageError(`Cannot resolve provider for unknown agent "${stepAgentId}".`);
+    throw new StorageError(`Cannot resolve harness for unknown agent "${stepAgentId}".`);
   }
 
-  return agent.provider;
+  return agent.harness;
 }
 
-export async function saveRunState(config: RexConfig, state: RunState): Promise<string> {
+export async function saveRunState(config: RmrConfig, state: RunState): Promise<string> {
   const path = runFilePath(config, state.run_id);
   const payload = JSON.stringify(
     {
@@ -79,7 +79,7 @@ export async function saveRunState(config: RexConfig, state: RunState): Promise<
   return path;
 }
 
-export async function loadRunState(config: RexConfig, runId: string): Promise<RunState> {
+export async function loadRunState(config: RmrConfig, runId: string): Promise<RunState> {
   const path = runFilePath(config, runId);
 
   try {

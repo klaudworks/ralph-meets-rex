@@ -1,12 +1,12 @@
 import { ValidationError } from "./errors";
-import type { ProviderName } from "./types";
+import type { HarnessName } from "./types";
 
-export interface ProviderAdapterOptions {
+export interface HarnessAdapterOptions {
   model?: string;
   allowAll: boolean;
 }
 
-export interface ProviderCommand {
+export interface HarnessCommand {
   binary: string;
   args: string[];
 }
@@ -20,26 +20,26 @@ export interface StreamParsedChunk {
 
 export type StreamLineParser = (line: string) => StreamParsedChunk | null;
 
-export interface ProviderAdapter {
-  name: ProviderName;
-  buildRunCommand(prompt: string, options: ProviderAdapterOptions): ProviderCommand;
+export interface HarnessAdapter {
+  name: HarnessName;
+  buildRunCommand(prompt: string, options: HarnessAdapterOptions): HarnessCommand;
   buildResumeCommand(
     sessionId: string,
     prompt: string,
-    options: ProviderAdapterOptions
-  ): ProviderCommand;
+    options: HarnessAdapterOptions
+  ): HarnessCommand;
   /**
-   * Create a fresh parser for a single provider run.
+   * Create a fresh parser for a single harness run.
    * The parser processes stdout lines and returns displayable text + optional metadata.
-   * Providers with structured output (e.g. stream-json) parse and extract text.
-   * Providers without structured output use a passthrough parser.
+   * Harnesses with structured output (e.g. stream-json) parse and extract text.
+   * Harnesses without structured output use a passthrough parser.
    */
   createStreamParser(): StreamLineParser;
   resumeTemplate(sessionId: string): string;
 }
 
 /**
- * Passthrough parser for providers without structured output.
+ * Passthrough parser for harnesses without structured output.
  * Simply returns the line as displayable text.
  */
 function createPassthroughParser(): StreamLineParser {
@@ -146,7 +146,7 @@ function createClaudeStreamParser(): StreamLineParser {
   };
 }
 
-const adapters: Record<ProviderName, ProviderAdapter> = {
+const adapters: Record<HarnessName, HarnessAdapter> = {
   claude: {
     name: "claude",
     buildRunCommand(prompt, options) {
@@ -213,10 +213,10 @@ const adapters: Record<ProviderName, ProviderAdapter> = {
   }
 };
 
-export function getProviderAdapter(name: string): ProviderAdapter {
-  const adapter = adapters[name as ProviderName];
+export function getHarnessAdapter(name: string): HarnessAdapter {
+  const adapter = adapters[name as HarnessName];
   if (!adapter) {
-    throw new ValidationError(`Unknown provider "${name}".`);
+    throw new ValidationError(`Unknown harness "${name}".`);
   }
 
   return adapter;
