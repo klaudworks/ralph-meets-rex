@@ -1,6 +1,8 @@
 import { Command } from "clipanion";
 import { basename } from "node:path";
 
+import { getVersion } from "../lib/version";
+
 type ShellName = "bash" | "zsh" | "fish";
 
 function detectShell(): ShellName | null {
@@ -23,7 +25,7 @@ export class RootCommand extends Command {
   public async execute(): Promise<number> {
     const shell = detectShell();
 
-    process.stdout.write("rmr - multi-step coding workflows for AI agents\n\n");
+    process.stdout.write(`rmr ${getVersion()} - multi-step coding workflows for AI agents\n\n`);
     process.stdout.write("Setup\n");
     process.stdout.write("  rmr install <name>      Install bundled workflow into .rmr/workflows/\n\n");
     process.stdout.write("Workflow\n");
