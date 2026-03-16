@@ -1,6 +1,6 @@
 {
   "name": "@klaudworks/rmr",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Define multi-step coding workflows for AI agents",
   "repository": {
     "type": "git",
