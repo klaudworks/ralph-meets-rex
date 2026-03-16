@@ -54,6 +54,19 @@ export class ContinueCommand extends Command {
     description: "Inject a one-time hint into the resumed harness prompt."
   });
 
+  public readonly model = Option.String("--model", {
+    required: false,
+    description: "Override model for the resumed step (e.g., openai/gpt-5.3-codex-high)."
+  });
+
+  public readonly allowAll = Option.Boolean("--allow-all", true, {
+    description: "Enable harness auto-approval flags when supported (default: true)."
+  });
+
+  public readonly noAllowAll = Option.Boolean("--no-allow-all", false, {
+    description: "Disable harness auto-approval flags."
+  });
+
   public async execute(): Promise<number> {
     const showUpdateNotice = startUpdateCheck();
     const config = await loadConfig();
@@ -66,6 +79,8 @@ export class ContinueCommand extends Command {
       runState.current_step = this.step;
     }
 
+    const effectiveAllowAll = this.noAllowAll ? false : this.allowAll;
+
     ui.workflowHeader({
       title: "rmr continue",
       workflow: runState.workflow_path,
@@ -74,8 +89,9 @@ export class ContinueCommand extends Command {
       runId: this.runId,
       currentStep: runState.current_step,
       runFile: "",
-      allowAll: true,
+      allowAll: effectiveAllowAll,
       harness: this.harness,
+      model: this.model,
       varsCount: 0
     });
 
@@ -84,6 +100,7 @@ export class ContinueCommand extends Command {
       harness?: HarnessName;
       sessionId?: string;
       hint?: string;
+      model?: string;
     } = {};
 
     if (this.step) {
@@ -98,9 +115,12 @@ export class ContinueCommand extends Command {
     if (this.hint && this.hint.trim() !== "") {
       overrides.hint = this.hint;
     }
+    if (this.model) {
+      overrides.model = this.model;
+    }
 
     await runWorkflow(config, workflow, runState, {
-      allowAll: true,
+      allowAll: effectiveAllowAll,
       overrides
     });
 
