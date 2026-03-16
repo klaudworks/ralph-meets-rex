@@ -13,6 +13,7 @@ const HUMAN_SENTINEL = "HUMAN_INTERVENTION_REQUIRED";
 interface ContinueOverrides {
   stepId?: string;
   provider?: ProviderName;
+  model?: string;
   sessionId?: string;
 }
 
@@ -124,9 +125,10 @@ export async function runWorkflow(
 
       const provider = options.overrides?.provider ?? agent.provider;
       const adapter = getProviderAdapter(provider);
+      const effectiveModel = options.overrides?.model ?? agent.model;
       const adapterOptions =
-        typeof agent.model === "string"
-          ? { allowAll: options.allowAll, model: agent.model }
+        typeof effectiveModel === "string"
+          ? { allowAll: options.allowAll, model: effectiveModel }
           : { allowAll: options.allowAll };
 
       const selectedSessionId =

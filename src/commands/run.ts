@@ -1,8 +1,26 @@
 import { Command, Option } from "clipanion";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
+import type { ProviderName } from "../lib/types";
+
+const PROVIDERS: ProviderName[] = ["claude", "opencode", "codex", "copilot"];
+
+function parseProviderOverride(value: string | undefined): ProviderName | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (!PROVIDERS.includes(value as ProviderName)) {
+    throw new UserInputError(
+      `Invalid provider override "${value}". Expected one of: ${PROVIDERS.join(", ")}.`
+    );
+  }
+
+  return value as ProviderName;
+}
 import { logger } from "../lib/logger";
 import { createInitialRunState, generateRunId, saveRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
@@ -35,6 +53,10 @@ export class RunCommand extends Command {
       "Loads and validates the workflow, creates a new run state under `.rex/runs/`, then executes steps until the run reaches `done` or pauses for human intervention.",
     examples: [
       ["Run minimal workflow", "$0 run .rex/workflows/quick.yml \"Implement auth middleware\""],
+      ["Run with task flag", "$0 run .rex/workflows/quick.yml --task \"Implement auth middleware\""],
+      ["Run with task file", "$0 run .rex/workflows/quick.yml --task-file task.md"],
+      ["Override provider", "$0 run .rex/workflows/quick.yml \"Fix bug\" --provider opencode"],
+      ["Override model", "$0 run .rex/workflows/quick.yml \"Fix bug\" --model openai/gpt-5.3-codex-high"],
       ["Run with extra variables", "$0 run .rex/workflows/feature.yml \"Ship feature\" --var issue_id=123 --var env=staging"],
       ["Disable auto-approval flags", "$0 run .rex/workflows/feature.yml \"Fix flaky tests\" --no-allow-all"]
     ]
@@ -44,8 +66,29 @@ export class RunCommand extends Command {
     name: "workflow-path"
   });
 
-  public readonly task = Option.String({
-    name: "task"
+  public readonly positionalTask = Option.String({
+    name: "task",
+    required: false
+  });
+
+  public readonly taskFlag = Option.String("--task,-t", {
+    required: false,
+    description: "Task description (alternative to positional argument)."
+  });
+
+  public readonly taskFile = Option.String("--task-file,-f", {
+    required: false,
+    description: "Path to file containing task description."
+  });
+
+  public readonly provider = Option.String("--provider", {
+    required: false,
+    description: "Override provider for all workflow steps."
+  });
+
+  public readonly model = Option.String("--model", {
+    required: false,
+    description: "Override model for all workflow steps (e.g., openai/gpt-5.3-codex-high)."
   });
 
   public readonly vars = Option.Array("--var", [], {
@@ -60,8 +103,44 @@ export class RunCommand extends Command {
     description: "Disable provider auto-approval flags."
   });
 
+  private async resolveTask(): Promise<string> {
+    if (this.taskFile && this.taskFlag) {
+      throw new UserInputError("Cannot specify both --task and --task-file.");
+    }
+
+    if (this.taskFile && this.positionalTask) {
+      throw new UserInputError("Cannot specify both positional task and --task-file.");
+    }
+
+    if (this.taskFlag && this.positionalTask) {
+      throw new UserInputError("Cannot specify both positional task and --task.");
+    }
+
+    if (this.taskFile) {
+      try {
+        const content = await readFile(resolve(this.taskFile), "utf-8");
+        return content.trim();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        throw new UserInputError(`Failed to read task file "${this.taskFile}": ${message}`);
+      }
+    }
+
+    if (this.taskFlag) {
+      return this.taskFlag;
+    }
+
+    if (this.positionalTask) {
+      return this.positionalTask;
+    }
+
+    throw new UserInputError("No task provided. Use positional argument, --task, or --task-file.");
+  }
+
   public async execute(): Promise<number> {
     const config = await loadConfig();
+    const task = await this.resolveTask();
+    const providerOverride = parseProviderOverride(this.provider);
     const parsedVars = this.vars.map(parseVar);
     const effectiveAllowAll = this.noAllowAll ? false : this.allowAll;
     const varsObject = Object.fromEntries(parsedVars.map((entry) => [entry.key, entry.value]));
@@ -72,7 +151,7 @@ export class RunCommand extends Command {
       runId,
       workflowPath,
       workflow,
-      task: this.task,
+      task,
       vars: varsObject
     });
     const runPath = await saveRunState(config, runState);
@@ -80,15 +159,30 @@ export class RunCommand extends Command {
     logger.header("Rex run initialized");
     logger.info(`workflow: ${workflowPath}`);
     logger.info(`workflow-id: ${workflow.id}`);
-    logger.info(`task: ${this.task}`);
+    logger.info(`task: ${task}`);
     logger.info(`allow-all: ${effectiveAllowAll}`);
+    logger.info(`provider override: ${this.provider ?? "(none)"}`);
+    logger.info(`model override: ${this.model ?? "(none)"}`);
     logger.info(`vars: ${parsedVars.length}`);
     logger.info(`run-id: ${runState.run_id}`);
     logger.info(`current-step: ${runState.current_step}`);
     logger.info(`run-file: ${runPath}`);
 
+    const overrides: {
+      provider?: ProviderName;
+      model?: string;
+    } = {};
+
+    if (providerOverride) {
+      overrides.provider = providerOverride;
+    }
+    if (this.model) {
+      overrides.model = this.model;
+    }
+
     await runWorkflow(config, workflow, runState, {
-      allowAll: effectiveAllowAll
+      allowAll: effectiveAllowAll,
+      overrides: Object.keys(overrides).length > 0 ? overrides : undefined
     });
 
     return 0;
