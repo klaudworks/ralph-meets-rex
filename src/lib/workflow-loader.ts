@@ -55,6 +55,7 @@ export async function loadWorkflowDefinition(workflowPath: string): Promise<Work
 
   const id = ensureString(parsed.id, "id");
   const name = ensureString(parsed.name, "name");
+  const version = typeof parsed.version === "string" ? parsed.version : undefined;
 
   if (!Array.isArray(parsed.agents) || parsed.agents.length === 0) {
     throw new ValidationError("Workflow must define a non-empty agents array.");
@@ -141,6 +142,7 @@ export async function loadWorkflowDefinition(workflowPath: string): Promise<Work
   return {
     id,
     name,
+    ...(version && { version }),
     agents,
     steps
   };

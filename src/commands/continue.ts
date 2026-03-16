@@ -19,6 +19,10 @@ export class ContinueCommand extends Command {
       ["Resume a paused run", "$0 continue 20260316-153210Z"],
       ["Resume from a specific step", "$0 continue 20260316-153210Z --step verify"],
       [
+        "Resume with a hint",
+        "$0 continue 20260316-153210Z --hint \"Plan mode only: read and propose changes, do not edit files.\""
+      ],
+      [
         "Force provider/session override",
         "$0 continue 20260316-153210Z --provider claude --session-id abc123"
       ]
@@ -42,6 +46,11 @@ export class ContinueCommand extends Command {
   public readonly sessionId = Option.String("--session-id", {
     required: false,
     description: "Force provider session id for resume attempt."
+  });
+
+  public readonly hint = Option.String("--hint", {
+    required: false,
+    description: "Inject a one-time hint into the resumed provider prompt."
   });
 
   public async execute(): Promise<number> {
@@ -72,6 +81,7 @@ export class ContinueCommand extends Command {
       stepId?: string;
       provider?: ProviderName;
       sessionId?: string;
+      hint?: string;
     } = {};
 
     if (this.step) {
@@ -82,6 +92,9 @@ export class ContinueCommand extends Command {
     }
     if (this.sessionId) {
       overrides.sessionId = this.sessionId;
+    }
+    if (this.hint && this.hint.trim() !== "") {
+      overrides.hint = this.hint;
     }
 
     await runWorkflow(config, workflow, runState, {

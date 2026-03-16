@@ -36,13 +36,27 @@ export class RunCommand extends Command {
     details:
       "Loads and validates the workflow, creates a new run state under `.rex/runs/`, then executes steps until the run reaches `done` or pauses for human intervention.",
     examples: [
-      ["Run minimal workflow", "$0 run .rex/workflows/quick.yml \"Implement auth middleware\""],
-      ["Run with task flag", "$0 run .rex/workflows/quick.yml --task \"Implement auth middleware\""],
-      ["Run with task file", "$0 run .rex/workflows/quick.yml --task-file task.md"],
-      ["Override provider", "$0 run .rex/workflows/quick.yml \"Fix bug\" --provider opencode"],
-      ["Override model", "$0 run .rex/workflows/quick.yml \"Fix bug\" --model openai/gpt-5.3-codex-high"],
-      ["Run with extra variables", "$0 run .rex/workflows/feature.yml \"Ship feature\" --var issue_id=123 --var env=staging"],
-      ["Disable auto-approval flags", "$0 run .rex/workflows/feature.yml \"Fix flaky tests\" --no-allow-all"]
+      [
+        "Run with task flag",
+        "$0 run .rex/workflows/quick-task/workflow.yaml --task \"Implement auth middleware\""
+      ],
+      ["Run with task file", "$0 run .rex/workflows/quick-task/workflow.yaml --task-file task.md"],
+      [
+        "Override provider",
+        "$0 run .rex/workflows/quick-task/workflow.yaml --task \"Fix bug\" --provider opencode"
+      ],
+      [
+        "Override model",
+        "$0 run .rex/workflows/quick-task/workflow.yaml --task \"Fix bug\" --model openai/gpt-5.3-codex-high"
+      ],
+      [
+        "Run with extra variables",
+        "$0 run .rex/workflows/feature-dev/workflow.yaml --task \"Ship feature\" --var issue_id=123 --var env=staging"
+      ],
+      [
+        "Disable auto-approval flags",
+        "$0 run .rex/workflows/feature-dev/workflow.yaml --task \"Fix flaky tests\" --no-allow-all"
+      ]
     ]
   });
 
@@ -50,14 +64,9 @@ export class RunCommand extends Command {
     name: "workflow-path"
   });
 
-  public readonly positionalTask = Option.String({
-    name: "task",
-    required: false
-  });
-
   public readonly taskFlag = Option.String("--task,-t", {
     required: false,
-    description: "Task description (alternative to positional argument)."
+    description: "Task description (mutually exclusive with --task-file)."
   });
 
   public readonly taskFile = Option.String("--task-file,-f", {
@@ -92,14 +101,6 @@ export class RunCommand extends Command {
       throw new UserInputError("Cannot specify both --task and --task-file.");
     }
 
-    if (this.taskFile && this.positionalTask) {
-      throw new UserInputError("Cannot specify both positional task and --task-file.");
-    }
-
-    if (this.taskFlag && this.positionalTask) {
-      throw new UserInputError("Cannot specify both positional task and --task.");
-    }
-
     if (this.taskFile) {
       try {
         const content = await readFile(resolve(this.taskFile), "utf-8");
@@ -115,11 +116,7 @@ export class RunCommand extends Command {
       return { task: this.taskFlag, displayTask: this.taskFlag };
     }
 
-    if (this.positionalTask) {
-      return { task: this.positionalTask, displayTask: this.positionalTask };
-    }
-
-    throw new UserInputError("No task provided. Use positional argument, --task, or --task-file.");
+    throw new UserInputError("No task provided. Use --task/-t or --task-file/-f.");
   }
 
   public async execute(): Promise<number> {
