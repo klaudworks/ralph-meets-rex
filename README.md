@@ -1,6 +1,6 @@
 # @klaudworks/rex
 
-![Rex workflows vs Ralph loops](docs/images/rex-workflows-vs-ralph-loops.jpg)
+![Rex](docs/images/rex.jpg)
 
 `rex` is a state-machine workflow orchestrator CLI.
 
