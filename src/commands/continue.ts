@@ -1,11 +1,11 @@
 import { Command, Option } from "clipanion";
 
 import { loadConfig } from "../lib/config";
-import { logger } from "../lib/logger";
 import { loadRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
 import { parseProviderOverride, type ProviderName } from "../lib/types";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
+import { ui } from "../lib/ui";
 
 export class ContinueCommand extends Command {
   public static paths = [["continue"]];
@@ -55,14 +55,18 @@ export class ContinueCommand extends Command {
       runState.current_step = this.step;
     }
 
-    logger.header("Rex continue bootstrap");
-    logger.info(`run-id: ${this.runId}`);
-    logger.info(`status: ${runState.status}`);
-    logger.info(`current-step: ${runState.current_step}`);
-    logger.info(`step override: ${this.step ?? "(none)"}`);
-    logger.info(`provider override: ${this.provider ?? "(none)"}`);
-    logger.info(`session override: ${this.sessionId ?? "(none)"}`);
-    logger.info(`workflow: ${runState.workflow_path}`);
+    ui.workflowHeader({
+      title: "rex continue",
+      workflow: runState.workflow_path,
+      workflowId: workflow.id,
+      task: runState.context["task"] ?? "(continuing)",
+      runId: this.runId,
+      currentStep: runState.current_step,
+      runFile: "",
+      allowAll: true,
+      provider: this.provider,
+      varsCount: 0
+    });
 
     const overrides: {
       stepId?: string;

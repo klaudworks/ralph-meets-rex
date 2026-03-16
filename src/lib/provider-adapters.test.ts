@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { getProviderAdapter } from "./provider-adapters";
+import { PROVIDERS } from "./types";
 
 describe("provider adapters", () => {
   test("claude allow-all mapping", () => {
@@ -26,5 +27,46 @@ describe("provider adapters", () => {
 
   test("unknown provider throws", () => {
     expect(() => getProviderAdapter("unknown")).toThrow('Unknown provider "unknown".');
+  });
+
+  test("all providers have parseStreamLine function", () => {
+    for (const provider of PROVIDERS) {
+      const adapter = getProviderAdapter(provider);
+      expect(typeof adapter.parseStreamLine).toBe("function");
+    }
+  });
+
+  test("passthrough parser returns line with newline", () => {
+    const adapter = getProviderAdapter("opencode");
+    const result = adapter.parseStreamLine("hello world");
+    expect(result).toEqual({ text: "hello world\n" });
+  });
+
+  test("claude parser extracts text delta", () => {
+    const adapter = getProviderAdapter("claude");
+    const line = JSON.stringify({
+      type: "stream_event",
+      session_id: "abc",
+      event: {
+        type: "content_block_delta",
+        delta: { type: "text_delta", text: "Hello" }
+      }
+    });
+    const result = adapter.parseStreamLine(line);
+    expect(result).toEqual({ text: "Hello", sessionId: "abc" });
+  });
+
+  test("claude parser extracts tool name", () => {
+    const adapter = getProviderAdapter("claude");
+    const line = JSON.stringify({
+      type: "stream_event",
+      session_id: "abc",
+      event: {
+        type: "content_block_start",
+        content_block: { type: "tool_use", name: "Read" }
+      }
+    });
+    const result = adapter.parseStreamLine(line);
+    expect(result).toEqual({ text: "", sessionId: "abc", toolName: "Read" });
   });
 });
