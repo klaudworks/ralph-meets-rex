@@ -9,6 +9,7 @@ export interface HarnessAdapterOptions {
 export interface HarnessCommand {
   binary: string;
   args: string[];
+  env?: Record<string, string>;
 }
 
 export interface StreamParsedChunk {
@@ -54,8 +55,122 @@ function withModelArgs(model: string | undefined, args: string[]): string[] {
   return [...args, "--model", model];
 }
 
+function opencodePermissionEnv(): Record<string, string> {
+  return {
+    OPENCODE_PERMISSION: JSON.stringify({
+      "*": "allow",
+      external_directory: "allow",
+      doom_loop: "allow"
+    })
+  };
+}
+
 function claudeStreamFlags(): string[] {
   return ["--output-format", "stream-json", "--verbose", "--include-partial-messages"];
+}
+
+/**
+ * Create a stateful parser for OpenCode JSON output.
+ * OpenCode emits JSONL with types: step_start, text, tool_use, step_finish.
+ * Session ID is in the top-level `sessionID` field.
+ */
+function createOpenCodeStreamParser(): StreamLineParser {
+  return (line: string): StreamParsedChunk | null => {
+    if (!line.trim()) {
+      return null;
+    }
+
+    let obj: Record<string, unknown>;
+    try {
+      obj = JSON.parse(line);
+    } catch {
+      return null;
+    }
+
+    const type = obj.type as string | undefined;
+    const sessionId = typeof obj.sessionID === "string" ? obj.sessionID : undefined;
+
+    if (type === "text") {
+      const part = obj.part as Record<string, unknown> | undefined;
+      const text = typeof part?.text === "string" ? part.text : "";
+      return { text, sessionId };
+    }
+
+    if (type === "tool_use") {
+      const part = obj.part as Record<string, unknown> | undefined;
+      const toolName = typeof part?.tool === "string" ? part.tool : undefined;
+      const state = part?.state as Record<string, unknown> | undefined;
+      const input = state?.input as Record<string, unknown> | undefined;
+      const toolInput = input ? JSON.stringify(input) : undefined;
+      return { text: "", sessionId, toolName, toolInput };
+    }
+
+    // step_start, step_finish, and others — just capture session ID
+    if (sessionId) {
+      return { text: "", sessionId };
+    }
+
+    return null;
+  };
+}
+
+/**
+ * Create a stateful parser for Codex JSONL output.
+ * Codex emits JSONL with types: thread.started, turn.started,
+ * item.started, item.completed, turn.completed.
+ * Thread ID is in the `thread_id` field of `thread.started`.
+ */
+function createCodexStreamParser(): StreamLineParser {
+  return (line: string): StreamParsedChunk | null => {
+    if (!line.trim()) {
+      return null;
+    }
+
+    let obj: Record<string, unknown>;
+    try {
+      obj = JSON.parse(line);
+    } catch {
+      return null;
+    }
+
+    const type = obj.type as string | undefined;
+
+    if (type === "thread.started") {
+      const sessionId = typeof obj.thread_id === "string" ? obj.thread_id : undefined;
+      return sessionId ? { text: "", sessionId } : null;
+    }
+
+    if (type === "item.completed") {
+      const item = obj.item as Record<string, unknown> | undefined;
+      if (!item) {
+        return null;
+      }
+
+      if (item.type === "agent_message") {
+        const text = typeof item.text === "string" ? item.text : "";
+        return { text };
+      }
+
+      if (item.type === "command_execution") {
+        const command = typeof item.command === "string" ? item.command : "shell";
+        return { text: "", toolName: "shell", toolInput: command };
+      }
+
+      return null;
+    }
+
+    if (type === "item.started") {
+      const item = obj.item as Record<string, unknown> | undefined;
+      if (item?.type === "command_execution") {
+        const command = typeof item.command === "string" ? item.command : "shell";
+        return { text: "", toolName: "shell", toolInput: command };
+      }
+      return null;
+    }
+
+    // turn.started, turn.completed — skip
+    return null;
+  };
 }
 
 /**
@@ -167,30 +282,39 @@ const adapters: Record<HarnessName, HarnessAdapter> = {
   opencode: {
     name: "opencode",
     buildRunCommand(prompt, options) {
-      const args = ["run", prompt];
-      return { binary: "opencode", args: withModelArgs(options.model, args) };
+      const args = ["run", "--format", "json", prompt];
+      return {
+        binary: "opencode",
+        args: withModelArgs(options.model, args),
+        ...(options.allowAll ? { env: opencodePermissionEnv() } : {})
+      };
     },
     buildResumeCommand(sessionId, prompt, options) {
-      const args = ["--resume", sessionId, "run", prompt];
-      return { binary: "opencode", args: withModelArgs(options.model, args) };
+      const args = ["run", "--format", "json", "--session", sessionId, prompt];
+      return {
+        binary: "opencode",
+        args: withModelArgs(options.model, args),
+        ...(options.allowAll ? { env: opencodePermissionEnv() } : {})
+      };
     },
-    createStreamParser: createPassthroughParser,
+    createStreamParser: createOpenCodeStreamParser,
     resumeTemplate(sessionId) {
-      return `opencode --resume ${sessionId}`;
+      return `opencode run --session ${sessionId}`;
     }
   },
   codex: {
     name: "codex",
     buildRunCommand(prompt, options) {
-      const auto = options.allowAll ? ["--full-auto"] : [];
-      const args = [...auto, "exec", prompt];
+      const auto = options.allowAll ? ["--dangerously-bypass-approvals-and-sandbox"] : [];
+      const args = ["exec", "--json", ...auto, prompt];
       return { binary: "codex", args: withModelArgs(options.model, args) };
     },
     buildResumeCommand(sessionId, prompt, options) {
-      const args = ["exec", "resume", sessionId, prompt];
+      const auto = options.allowAll ? ["--dangerously-bypass-approvals-and-sandbox"] : [];
+      const args = ["exec", "resume", "--json", ...auto, sessionId, prompt];
       return { binary: "codex", args: withModelArgs(options.model, args) };
     },
-    createStreamParser: createPassthroughParser,
+    createStreamParser: createCodexStreamParser,
     resumeTemplate(sessionId) {
       return `codex exec resume ${sessionId} "<prompt>"`;
     }

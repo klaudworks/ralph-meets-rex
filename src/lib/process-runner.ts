@@ -39,7 +39,8 @@ export async function runHarnessCommand(
 ): Promise<ProcessRunResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(command.binary, command.args, {
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
+      ...(command.env ? { env: { ...process.env, ...command.env } } : {})
     });
 
     child.on("error", (err: NodeJS.ErrnoException) => {
