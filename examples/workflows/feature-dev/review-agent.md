@@ -61,3 +61,11 @@ Use `<rmr:next_state>` to route the workflow.
 - Add unrelated tests
 - Approve changes that fail build or tests
 - Skip or weaken tests to make the suite pass
+
+## Context
+
+Task: {{task}}
+Plan: {{plan.plan}}
+Developer summary: {{implement.summary}}
+Commit: {{implement.commit}}
+Tests: {{implement.tests}}

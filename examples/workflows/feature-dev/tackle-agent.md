@@ -51,3 +51,9 @@ If blocked after 3 attempts:
 <rmr:status>human_intervention_required</rmr:status>
 <rmr:reason>What is blocking and what was tried</rmr:reason>
 ```
+
+## Context
+
+Task: {{task}}
+Plan: {{plan.plan}}
+Reviewer feedback: {{verify.issues}}

@@ -63,3 +63,7 @@ For rejected issues (terminates the workflow):
 <rmr:summary>Why this issue was rejected</rmr:summary>
 <rmr:plan>N/A</rmr:plan>
 ```
+
+## Context
+
+Task: {{task}}
