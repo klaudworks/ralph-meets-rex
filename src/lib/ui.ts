@@ -186,31 +186,6 @@ export const ui = {
   },
 
   /**
-   * Render tool usage summary in dimmed style.
-   */
-  toolSummary(counts: Map<string, number>): string {
-    const entries = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-    const shown = entries.slice(0, 6);
-    const remaining = entries.length - shown.length;
-    const parts = shown.map(([name, count]) => `${name} ${count}`);
-    if (remaining > 0) {
-      parts.push(`+${remaining} more`);
-    }
-    return parts.join(" │ ");
-  },
-
-  /**
-   * Print tool summary line to stderr (dimmed).
-   */
-  printToolLine(summary: string, isUpdate: boolean): void {
-    if (isUpdate && isTTY) {
-      // Clear previous line before rewriting
-      process.stderr.write(`\x1b[1A\x1b[2K`);
-    }
-    process.stderr.write(isTTY ? chalk.gray(`  tools: ${summary}\n`) : `  tools: ${summary}\n`);
-  },
-
-  /**
    * Print a tool call with its input parameters.
    */
   printToolCall(toolName: string, toolInput: string): void {

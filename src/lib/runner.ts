@@ -15,6 +15,7 @@ interface ContinueOverrides {
   provider?: ProviderName;
   model?: string;
   sessionId?: string;
+  hint?: string;
 }
 
 function findStep(workflow: WorkflowDefinition, stepId: string): WorkflowStep | undefined {
@@ -117,7 +118,14 @@ export async function runWorkflow(
 
     try {
       assertRequiredInputs(step.input_required, runState.context);
-      const renderedInput = resolveTemplate(step.input, runState.context);
+      const resolvedInput = resolveTemplate(step.input, runState.context);
+      const injectedHint =
+        isFirstIteration && typeof options.overrides?.hint === "string"
+          ? options.overrides.hint.trim()
+          : "";
+      const renderedInput = injectedHint
+        ? `${resolvedInput}\n\nNote: ${injectedHint}`
+        : resolvedInput;
       const agentPrompt = await loadAgentPrompt(config, agent.prompt);
       const prompt = composePrompt(agentPrompt, renderedInput);
 
