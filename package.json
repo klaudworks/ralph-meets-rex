@@ -9,6 +9,7 @@
   "type": "module",
   "files": [
     "dist",
+    "templates",
     "npm-shrinkwrap.json",
     "README.md"
   ],

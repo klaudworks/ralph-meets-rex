@@ -4,19 +4,18 @@ import { assertRequiredInputs, resolveTemplate } from "./templating";
 
 describe("templating", () => {
   test("resolves task, plain vars, and namespaced vars", () => {
-    const rendered = resolveTemplate("Task={{task}} issue={{issue_id}} plan={{planner.items_json}}", {
+    const rendered = resolveTemplate("Task={{task}} issue={{issue_id}} plan={{plan.items_json}}", {
       task: "build",
       issue_id: "123",
-      "planner.items_json": "[]"
+      "plan.items_json": "[]"
     });
 
     expect(rendered).toBe("Task=build issue=123 plan=[]");
   });
 
-  test("throws on missing template variable", () => {
-    expect(() => resolveTemplate("Missing {{developer.summary}}", { task: "x" })).toThrow(
-      'Template variable "developer.summary" is missing.'
-    );
+  test("resolves missing template variable to empty string", () => {
+    const rendered = resolveTemplate("Missing {{implement.summary}}", { task: "x" });
+    expect(rendered).toBe("Missing ");
   });
 
   test("asserts required inputs", () => {

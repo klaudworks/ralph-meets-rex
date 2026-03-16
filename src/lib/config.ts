@@ -1,6 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
+import { ensureScaffold } from "./scaffold";
+
 export interface RexConfig {
   workspaceRoot: string;
   rexDir: string;
@@ -27,6 +29,8 @@ export async function loadConfig(workspaceRoot = process.cwd()): Promise<RexConf
     mkdir(config.workflowsDir, { recursive: true }),
     mkdir(config.agentsDir, { recursive: true })
   ]);
+
+  await ensureScaffold(config);
 
   return config;
 }
