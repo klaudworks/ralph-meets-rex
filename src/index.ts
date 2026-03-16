@@ -4,6 +4,7 @@ import { Builtins, Cli } from "clipanion";
 import { CompleteCommand } from "./commands/complete";
 import { CompletionCommand } from "./commands/completion";
 import { ContinueCommand } from "./commands/continue";
+import { InstallCommand } from "./commands/install";
 import { RootCommand } from "./commands/root";
 import { RexError } from "./lib/errors";
 import { logger } from "./lib/logger";
@@ -19,6 +20,7 @@ const cli = new Cli({
 cli.register(Builtins.HelpCommand);
 cli.register(Builtins.VersionCommand);
 cli.register(RootCommand);
+cli.register(InstallCommand);
 cli.register(RunCommand);
 cli.register(ContinueCommand);
 cli.register(CompleteCommand);

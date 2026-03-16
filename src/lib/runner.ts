@@ -128,7 +128,7 @@ export async function runWorkflow(
       const renderedInput = injectedHint
         ? `${resolvedInput}\n\nNote: ${injectedHint}`
         : resolvedInput;
-      const agentPrompt = await loadAgentPrompt(config, agent.prompt);
+      const agentPrompt = await loadAgentPrompt(runState.workflow_path, agent.prompt);
       const prompt = composePrompt(agentPrompt, renderedInput);
 
       const provider = options.overrides?.provider ?? agent.provider;

@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { access, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { RexConfig } from "./config";
@@ -29,10 +29,31 @@ export async function listWorkflowCompletions(
   partial = ""
 ): Promise<string[]> {
   const entries = await readdir(config.workflowsDir, { withFileTypes: true });
+  const workflows: string[] = [];
 
-  return entries
-    .filter((entry) => entry.isFile() && (entry.name.endsWith(".yml") || entry.name.endsWith(".yaml")))
-    .map((entry) => resolve(config.workflowsDir, entry.name))
-    .filter((filePath) => matchesPartial(filePath, partial))
-    .sort();
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const workflowYaml = resolve(config.workflowsDir, entry.name, "workflow.yaml");
+    const workflowYml = resolve(config.workflowsDir, entry.name, "workflow.yml");
+
+    try {
+      await access(workflowYaml);
+      workflows.push(workflowYaml);
+      continue;
+    } catch {
+      // Try .yml fallback
+    }
+
+    try {
+      await access(workflowYml);
+      workflows.push(workflowYml);
+    } catch {
+      // Ignore directories without a workflow file
+    }
+  }
+
+  return workflows.filter((filePath) => matchesPartial(filePath, partial)).sort();
 }

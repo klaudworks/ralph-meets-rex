@@ -21,7 +21,7 @@ function bashScript(): string {
     "  prev=\"${COMP_WORDS[COMP_CWORD-1]}\"",
     "",
     "  if [[ ${COMP_CWORD} -eq 1 ]]; then",
-    "    COMPREPLY=( $(compgen -W \"run continue complete completion --help --version\" -- \"${cur}\") )",
+    "    COMPREPLY=( $(compgen -W \"install run continue complete completion --help --version\" -- \"${cur}\") )",
     "    return 0",
     "  fi",
     "",
@@ -44,7 +44,7 @@ function zshScript(): string {
     "#compdef rex",
     "_rex_complete() {",
     "  local -a subcommands",
-    "  subcommands=(run continue complete completion)",
+    "  subcommands=(install run continue complete completion)",
     "",
     "  if (( CURRENT == 2 )); then",
     "    _describe 'command' subcommands",
@@ -76,7 +76,7 @@ function fishScript(): string {
     "end",
     "",
     "complete -c rex -f",
-    "complete -c rex -n '__fish_use_subcommand' -a 'run continue complete completion'",
+    "complete -c rex -n '__fish_use_subcommand' -a 'install run continue complete completion'",
     "complete -c rex -n '__fish_seen_subcommand_from continue' -a '(__rex_complete_run_id)'",
     "complete -c rex -n '__fish_seen_subcommand_from run' -a '(__rex_complete_workflow)'"
   ].join("\n");

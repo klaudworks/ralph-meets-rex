@@ -1,6 +1,3 @@
----
-rex-managed: true
----
 # Review
 
 You are reviewing a change made by the tackle agent. Your job is to verify
@@ -34,7 +31,7 @@ correctness, catch regressions, and ensure code quality.
 
 Use `<rex:next_state>` to route the workflow.
 
-**Approve** — the change is correct and improves the codebase:
+**Approve** -- the change is correct and improves the codebase:
 
 ```
 <rex:status>done</rex:status>
@@ -42,7 +39,7 @@ Use `<rex:next_state>` to route the workflow.
 <rex:summary>Why this change is good</rex:summary>
 ```
 
-**Request changes** — issues that need fixing (sends back to implement):
+**Request changes** -- issues that need fixing (sends back to implement):
 
 ```
 <rex:status>done</rex:status>
@@ -50,7 +47,7 @@ Use `<rex:next_state>` to route the workflow.
 <rex:issues>What needs to be fixed and why</rex:issues>
 ```
 
-**Escalate** — needs human judgment:
+**Escalate** -- needs human judgment:
 
 ```
 <rex:status>human_intervention_required</rex:status>
@@ -59,7 +56,7 @@ Use `<rex:next_state>` to route the workflow.
 
 ## Do NOT
 
-- Make improvements — review only
+- Make improvements -- review only
 - Refactor code touched by the commit
 - Add unrelated tests
 - Approve changes that fail build or tests

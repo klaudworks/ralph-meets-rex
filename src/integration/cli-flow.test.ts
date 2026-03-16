@@ -34,17 +34,32 @@ function parseRunId(output: string): string {
 }
 
 describe("cli integration", () => {
+  test("install copies bundled workflow into .rex/workflows", async () => {
+    const root = await mkdtemp(resolve(tmpdir(), "rex-cli-"));
+
+    const result = await runCli(["install", "feature-dev"], root, {
+      ...process.env
+    } as Record<string, string>);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("installed .rex/workflows/feature-dev/");
+
+    const installedWorkflow = await readFile(
+      resolve(root, ".rex", "workflows", "feature-dev", "workflow.yaml"),
+      "utf8"
+    );
+    expect(installedWorkflow).toContain("id: feature-dev");
+  });
+
   test("run reaches done and writes done state", async () => {
     const root = await mkdtemp(resolve(tmpdir(), "rex-cli-"));
-    const rexAgents = resolve(root, ".rex", "agents");
     const fakeBinDir = resolve(root, "fake-bin");
 
-    await mkdir(rexAgents, { recursive: true });
+    await mkdir(resolve(root, ".rex", "workflows"), { recursive: true });
     await mkdir(fakeBinDir, { recursive: true });
 
-    await writeFile(resolve(rexAgents, "worker.md"), "You are worker", "utf8");
-
     const workflowPath = resolve(root, "workflow.yml");
+    await writeFile(resolve(root, "worker.md"), "You are worker", "utf8");
     await writeFile(
       workflowPath,
       `id: quick-task\nname: Quick Task\nagents:\n  - id: worker\n    provider: claude\n    prompt: worker.md\nsteps:\n  - id: execute\n    agent: worker\n    default_next: done\n    input_required: [task]\n    outputs:\n      required: [result]\n    input: |\n      Do {{task}}\n`,
@@ -63,7 +78,7 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
     );
     await chmod(fakeClaude, 0o755);
 
-    const result = await runCli(["run", workflowPath, "ship it"], root, {
+    const result = await runCli(["run", workflowPath, "--task", "ship it"], root, {
       ...process.env,
       PATH: `${fakeBinDir}:${process.env.PATH ?? ""}`
     } as Record<string, string>);
@@ -86,15 +101,13 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
 
   test("run pauses and continue resumes", async () => {
     const root = await mkdtemp(resolve(tmpdir(), "rex-cli-"));
-    const rexAgents = resolve(root, ".rex", "agents");
     const fakeBinDir = resolve(root, "fake-bin");
 
-    await mkdir(rexAgents, { recursive: true });
+    await mkdir(resolve(root, ".rex", "workflows"), { recursive: true });
     await mkdir(fakeBinDir, { recursive: true });
 
-    await writeFile(resolve(rexAgents, "worker.md"), "You are worker", "utf8");
-
     const workflowPath = resolve(root, "workflow.yml");
+    await writeFile(resolve(root, "worker.md"), "You are worker", "utf8");
     await writeFile(
       workflowPath,
       `id: quick-task\nname: Quick Task\nagents:\n  - id: worker\n    provider: claude\n    prompt: worker.md\nsteps:\n  - id: execute\n    agent: worker\n    default_next: done\n    input_required: [task]\n    outputs:\n      required: [result]\n    input: |\n      Do {{task}}\n`,
@@ -120,7 +133,7 @@ fi
     );
     await chmod(fakeClaude, 0o755);
 
-    const paused = await runCli(["run", workflowPath, "ship it"], root, {
+    const paused = await runCli(["run", workflowPath, "--task", "ship it"], root, {
       ...process.env,
       CLAUDE_MODE: "pause",
       PATH: `${fakeBinDir}:${process.env.PATH ?? ""}`
