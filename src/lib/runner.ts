@@ -40,6 +40,31 @@ function outputSnippet(output: string): string {
   return compact.length > 220 ? `${compact.slice(0, 220)}...` : compact;
 }
 
+function harnessExitReason(params: {
+  stepId: string;
+  harness: HarnessName;
+  model?: string;
+  exitCode: number;
+  stderr: string;
+  combinedOutput: string;
+}): string {
+  const stderrSnippet = outputSnippet(params.stderr);
+  const outputPreview = outputSnippet(params.combinedOutput);
+  const details: string[] = [`harness=${params.harness}`];
+
+  if (params.model) {
+    details.push(`model=${params.model}`);
+  }
+
+  if (stderrSnippet !== "(no output)") {
+    details.push(`stderr=${stderrSnippet}`);
+  } else if (outputPreview !== "(no output)") {
+    details.push(`output=${outputPreview}`);
+  }
+
+  return `Harness exited with code ${params.exitCode} at step "${params.stepId}" (${details.join("; ")}).`;
+}
+
 async function pauseRun(
   config: RmrConfig,
   runState: RunState,
@@ -116,7 +141,6 @@ export async function runWorkflow(
     }
 
     const stepStartedAt = new Date().toISOString();
-    ui.stepStart(stepNumber, step.id, agent.id);
 
     try {
       assertRequiredInputs(step.input_required, runState.context);
@@ -139,10 +163,19 @@ export async function runWorkflow(
           ? { allowAll: options.allowAll, model: effectiveModel }
           : { allowAll: options.allowAll };
 
+      ui.stepStart(stepNumber, step.id, agent.id, harness, effectiveModel);
+
+      // Only carry over session id when the harness hasn't changed.
+      // A claude session id is meaningless to codex (and vice versa).
+      const lastSessionMatchesHarness =
+        runState.last_harness?.name === harness
+          ? runState.last_harness.session_id
+          : null;
+
       const selectedSessionId =
         isFirstIteration && options.overrides?.sessionId
           ? options.overrides.sessionId
-          : runState.last_harness?.session_id;
+          : lastSessionMatchesHarness;
 
       const command =
         isFirstIteration && selectedSessionId
@@ -168,7 +201,14 @@ export async function runWorkflow(
         await pauseRun(
           config,
           runState,
-          `Harness exited with code ${result.exitCode} at step "${step.id}".`,
+          harnessExitReason({
+            stepId: step.id,
+            harness,
+            exitCode: result.exitCode,
+            stderr: result.stderr,
+            combinedOutput: result.combinedOutput,
+            ...(effectiveModel ? { model: effectiveModel } : {})
+          }),
           harness,
           runState.last_harness.session_id
         );

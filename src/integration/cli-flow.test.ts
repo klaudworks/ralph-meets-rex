@@ -82,8 +82,11 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Run completed");
-    expect(result.stdout).toContain("harness:");
-    expect(result.stdout).toContain("model:");
+    expect(result.stdout).toContain("Step 1: execute (worker)");
+    expect(result.stdout).toContain("harness: claude    model: (default)");
+    expect(result.stdout).not.toContain("│ step:");
+    expect(result.stdout).not.toContain("│ harness:");
+    expect(result.stdout).not.toContain("│ model:");
   });
 
   test("install copies bundled workflow into .rmr/workflows", async () => {
@@ -203,8 +206,8 @@ fi
 
     expect(resumed.exitCode).toBe(0);
     expect(resumed.stdout).toContain("Run completed");
-    expect(resumed.stdout).toContain("harness:");
-    expect(resumed.stdout).toContain("model:");
+    expect(resumed.stdout).toContain("Step 1: execute (worker)");
+    expect(resumed.stdout).toContain("harness: claude    model: (default)");
   }, 15000);
 
   test("run includes harness failure details when harness exits non-zero", async () => {
@@ -320,8 +323,8 @@ echo '{"type":"item.completed","item":{"type":"agent_message","text":"<rmr:statu
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Run completed");
-    expect(result.stdout).toContain("harness:  codex");
-    expect(result.stdout).toContain("model:    gpt-5.3-codex");
+    expect(result.stdout).toContain("Step 2: implement (developer)");
+    expect(result.stdout).toContain("harness: codex    model: gpt-5.3-codex");
     expect(result.stderr).not.toContain("unexpected resume path for codex");
   });
 });

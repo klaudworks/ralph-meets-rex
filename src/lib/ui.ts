@@ -79,11 +79,8 @@ export const ui = {
     workflowId?: string;
     task: string;
     runId: string;
-    currentStep: string;
     runFile: string;
     allowAll: boolean;
-    harness?: string | undefined;
-    model?: string | undefined;
     varsCount: number;
   }): void {
     const line = isTTY ? "─" : "-";
@@ -123,21 +120,6 @@ export const ui = {
         ? chalk.dim(`│ ${formatLine("run-id", info.runId)} │\n`)
         : `│ ${formatLine("run-id", info.runId)} │\n`
     );
-    process.stdout.write(
-      isTTY
-        ? chalk.dim(`│ ${formatLine("step", info.currentStep)} │\n`)
-        : `│ ${formatLine("step", info.currentStep)} │\n`
-    );
-    process.stdout.write(
-      isTTY
-        ? chalk.dim(`│ ${formatLine("harness", info.harness ?? "(auto)")} │\n`)
-        : `│ ${formatLine("harness", info.harness ?? "(auto)")} │\n`
-    );
-    process.stdout.write(
-      isTTY
-        ? chalk.dim(`│ ${formatLine("model", info.model ?? "(default)")} │\n`)
-        : `│ ${formatLine("model", info.model ?? "(default)")} │\n`
-    );
 
     // Word-wrap the task across multiple lines, preserving user newlines.
     const taskLines = info.task.split("\n").flatMap((line) => {
@@ -168,7 +150,13 @@ export const ui = {
   /**
    * Render step start header.
    */
-  stepStart(stepNumber: number, stepId: string, agentId: string): void {
+  stepStart(
+    stepNumber: number,
+    stepId: string,
+    agentId: string,
+    harness: string,
+    model?: string
+  ): void {
     const line = isTTY ? "─" : "-";
     const corner = { tl: isTTY ? "┌" : "+", tr: isTTY ? "┐" : "+" };
     const label = ` Step ${stepNumber}: ${stepId} (${agentId}) `;
@@ -182,6 +170,8 @@ export const ui = {
         ? chalk.cyan.bold(`${corner.tl}${line}${label}${border}${corner.tr}\n`)
         : `${corner.tl}${line}${label}${border}${corner.tr}\n`
     );
+    const metaLine = `  harness: ${harness}    model: ${model ?? "(default)"}`;
+    process.stdout.write(isTTY ? chalk.dim(`${metaLine}\n`) : `${metaLine}\n`);
     process.stdout.write("\n");
   },
 

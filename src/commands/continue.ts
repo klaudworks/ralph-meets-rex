@@ -80,11 +80,6 @@ export class ContinueCommand extends BaseCommand {
       runState.current_step = this.step;
     }
 
-    const currentStep = workflow.steps.find((step) => step.id === runState.current_step);
-    const currentAgent = currentStep
-      ? workflow.agents.find((agent) => agent.id === currentStep.agent)
-      : undefined;
-
     const effectiveAllowAll = this.noAllowAll ? false : this.allowAll;
 
     ui.workflowHeader({
@@ -93,11 +88,8 @@ export class ContinueCommand extends BaseCommand {
       workflowId: workflow.id,
       task: runState.context["task"] ?? "(continuing)",
       runId: this.runId,
-      currentStep: runState.current_step,
       runFile: "",
       allowAll: effectiveAllowAll,
-      harness: harnessOverride ?? currentAgent?.harness ?? runState.last_harness?.name,
-      model: this.model ?? currentAgent?.model,
       varsCount: 0
     });
 

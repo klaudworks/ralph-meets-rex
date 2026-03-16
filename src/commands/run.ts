@@ -238,10 +238,6 @@ export class RunCommand extends BaseCommand {
       task,
       vars: varsObject
     });
-    const initialStep = workflow.steps.find((step) => step.id === runState.current_step);
-    const initialAgent = initialStep
-      ? workflow.agents.find((agent) => agent.id === initialStep.agent)
-      : undefined;
     const runPath = await saveRunState(config, runState);
 
     ui.workflowHeader({
@@ -250,11 +246,8 @@ export class RunCommand extends BaseCommand {
       workflowId: workflow.id,
       task: displayTask,
       runId: runState.run_id,
-      currentStep: runState.current_step,
       runFile: runPath,
       allowAll: effectiveAllowAll,
-      harness: harnessOverride ?? initialAgent?.harness,
-      model: this.model ?? initialAgent?.model,
       varsCount: parsedVars.length
     });
 
