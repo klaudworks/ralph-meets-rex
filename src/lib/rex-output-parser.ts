@@ -6,29 +6,13 @@ export interface RexStepOutput {
   values: Record<string, string>;
 }
 
-const OUTPUT_BLOCK_REGEX = /<rex_output>([\s\S]*?)<\/rex_output>/g;
-const XML_FIELD_REGEX = /<([a-z][a-z0-9_]*)>([\s\S]*?)<\/\1>/g;
+const REX_TAG_REGEX = /<rex:([a-z][a-z0-9_]*)>([\s\S]*?)<\/rex:\1>/g;
 
 export function parseRexOutput(rawText: string): RexStepOutput {
-  const blocks = Array.from(rawText.matchAll(OUTPUT_BLOCK_REGEX));
-
-  if (blocks.length === 0) {
-    throw new ValidationError("Missing <rex_output> block.");
-  }
-
-  if (blocks.length > 1) {
-    throw new ValidationError("Multiple <rex_output> blocks found.");
-  }
-
-  const block = blocks[0]?.[1];
-  if (!block) {
-    throw new ValidationError("Malformed <rex_output> block.");
-  }
-
   const values: Record<string, string> = {};
   let fieldCount = 0;
 
-  for (const match of block.matchAll(XML_FIELD_REGEX)) {
+  for (const match of rawText.matchAll(REX_TAG_REGEX)) {
     const key = match[1];
     if (!key) {
       continue;
@@ -40,7 +24,7 @@ export function parseRexOutput(rawText: string): RexStepOutput {
   }
 
   if (fieldCount === 0) {
-    throw new ValidationError("Malformed <rex_output> XML fields.");
+    throw new ValidationError("No <rex:*> tags found in output.");
   }
 
   const output: RexStepOutput = { values };

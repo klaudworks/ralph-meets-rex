@@ -37,23 +37,20 @@ Aim for the most elegant implementation that fulfills the plan's intent.
 
 ## Output
 
-Emit exactly one `<rex_output>` block at the end of your response.
+Emit `<rex:*>` tags at the end of your response. Rex parses these automatically.
 
 On success:
-```xml
-<rex_output>
-  <status>done</status>
-  <summary>What was implemented and why</summary>
-  <commit>The commit hash</commit>
-  <files_changed>List of files modified</files_changed>
-  <tests>Test results summary</tests>
-</rex_output>
+
+```
+<rex:status>done</rex:status>
+<rex:summary>What was implemented and why</rex:summary>
+<rex:commit>The commit hash</rex:commit>
+<rex:tests>Test results summary</rex:tests>
 ```
 
 If blocked after 3 attempts:
-```xml
-<rex_output>
-  <status>human_intervention_required</status>
-  <reason>What is blocking and what was tried</reason>
-</rex_output>
+
+```
+<rex:status>human_intervention_required</rex:status>
+<rex:reason>What is blocking and what was tried</rex:reason>
 ```

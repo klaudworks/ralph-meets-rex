@@ -56,7 +56,7 @@ describe("cli integration", () => {
       fakeClaude,
       `#!/bin/sh
 echo '{"type":"system","subtype":"init","session_id":"fake-session-1"}'
-echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rex_output><status>done</status><next_state>done</next_state><result>ok</result></rex_output>"}},"session_id":"fake-session-1"}'
+echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rex:status>done</rex:status><rex:next_state>done</rex:next_state><rex:result>ok</rex:result>"}},"session_id":"fake-session-1"}'
 echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result":"ok"}'
 `,
       "utf8"
@@ -107,12 +107,12 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
       `#!/bin/sh
 if [ "$CLAUDE_MODE" = "pause" ]; then
   echo '{"type":"system","subtype":"init","session_id":"fake-session-1"}'
-  echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rex_output><status>human_intervention_required</status><next_state>human_intervention</next_state><result>pending</result></rex_output>"}},"session_id":"fake-session-1"}'
+  echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rex:status>human_intervention_required</rex:status><rex:next_state>human_intervention</rex:next_state><rex:result>pending</rex:result>"}},"session_id":"fake-session-1"}'
   echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"\nHUMAN_INTERVENTION_REQUIRED\n"}},"session_id":"fake-session-1"}'
   echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result":"ok"}'
 else
   echo '{"type":"system","subtype":"init","session_id":"fake-session-2"}'
-  echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rex_output><status>done</status><next_state>done</next_state><result>ok</result></rex_output>"}},"session_id":"fake-session-2"}'
+  echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rex:status>done</rex:status><rex:next_state>done</rex:next_state><rex:result>ok</rex:result>"}},"session_id":"fake-session-2"}'
   echo '{"type":"result","subtype":"success","session_id":"fake-session-2","result":"ok"}'
 fi
 `,
