@@ -1,6 +1,6 @@
 {
   "name": "rex-meets-ralph",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "State-machine workflow orchestrator CLI",
   "type": "module",
   "files": [
