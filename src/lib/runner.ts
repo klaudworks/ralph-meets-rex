@@ -1,5 +1,4 @@
 import type { RexConfig } from "./config";
-import { logger } from "./logger";
 import { loadAgentPrompt, composePrompt } from "./prompt-composer";
 import { getProviderAdapter } from "./provider-adapters";
 import { runProviderCommand } from "./process-runner";
@@ -7,6 +6,7 @@ import { parseRexOutput, validateRequiredOutputKeys } from "./rex-output-parser"
 import { saveRunState } from "./run-state";
 import { assertRequiredInputs, resolveTemplate } from "./templating";
 import type { ProviderName, RunState, WorkflowDefinition, WorkflowStep } from "./types";
+import { ui } from "./ui";
 
 const HUMAN_SENTINEL = "HUMAN_INTERVENTION_REQUIRED";
 
@@ -52,13 +52,11 @@ async function pauseRun(
   const adapter = getProviderAdapter(providerName);
   const resolvedSession = sessionId ?? "<session-id>";
 
-  logger.warn(`Paused: ${reason}`);
-  logger.info("");
-  logger.info("Resume workflow:");
-  logger.info(`  rex continue ${runState.run_id}`);
-  logger.info("");
-  logger.info("Resume agent session directly:");
-  logger.info(`  ${adapter.resumeTemplate(resolvedSession)}`);
+  ui.pauseInstructions({
+    reason,
+    runId: runState.run_id,
+    resumeCommand: adapter.resumeTemplate(resolvedSession)
+  });
 }
 
 function applyOutputToContext(
@@ -115,7 +113,7 @@ export async function runWorkflow(
       return runState;
     }
 
-    logger.header(`=== Step: ${step.id} (${agent.id}) ===`);
+    ui.stepStart(step.id, agent.id);
 
     try {
       assertRequiredInputs(step.input_required, runState.context);
@@ -151,10 +149,9 @@ export async function runWorkflow(
         session_id: selectedSessionId ?? null
       };
 
-      const result = await runProviderCommand(command);
-      const parsedSessionId = adapter.parseSessionId(result.combinedOutput);
-      if (parsedSessionId) {
-        runState.last_provider.session_id = parsedSessionId;
+      const result = await runProviderCommand(command, adapter.parseStreamLine);
+      if (result.sessionId) {
+        runState.last_provider.session_id = result.sessionId;
       }
 
       if (result.exitCode !== 0) {
@@ -220,11 +217,13 @@ export async function runWorkflow(
         return runState;
       }
 
+      ui.stepEnd();
+
       if (nextState === "done") {
         runState.status = "done";
         runState.current_step = "done";
         await saveRunState(config, runState);
-        logger.success(`Run completed: ${runState.run_id}`);
+        ui.success(`Run completed: ${runState.run_id}`);
         return runState;
       }
 

@@ -5,10 +5,10 @@ import { resolve } from "node:path";
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
 import { parseProviderOverride, type ProviderName } from "../lib/types";
-import { logger } from "../lib/logger";
 import { createInitialRunState, generateRunId, saveRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
+import { ui } from "../lib/ui";
 
 interface ParsedVar {
   key: string;
@@ -140,17 +140,19 @@ export class RunCommand extends Command {
     });
     const runPath = await saveRunState(config, runState);
 
-    logger.header("Rex run initialized");
-    logger.info(`workflow: ${workflowPath}`);
-    logger.info(`workflow-id: ${workflow.id}`);
-    logger.info(`task: ${task}`);
-    logger.info(`allow-all: ${effectiveAllowAll}`);
-    logger.info(`provider override: ${this.provider ?? "(none)"}`);
-    logger.info(`model override: ${this.model ?? "(none)"}`);
-    logger.info(`vars: ${parsedVars.length}`);
-    logger.info(`run-id: ${runState.run_id}`);
-    logger.info(`current-step: ${runState.current_step}`);
-    logger.info(`run-file: ${runPath}`);
+    ui.workflowHeader({
+      title: "rex",
+      workflow: workflowPath,
+      workflowId: workflow.id,
+      task,
+      runId: runState.run_id,
+      currentStep: runState.current_step,
+      runFile: runPath,
+      allowAll: effectiveAllowAll,
+      provider: this.provider,
+      model: this.model,
+      varsCount: parsedVars.length
+    });
 
     const overrides: {
       provider?: ProviderName;
