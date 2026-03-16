@@ -235,7 +235,7 @@ export async function runWorkflow(
         await pauseRun(
           config,
           runState,
-          `${message} Raw output snippet: ${outputSnippet(result.combinedOutput)}`,
+          message,
           harness,
           runState.last_harness.session_id
         );
