@@ -1,7 +1,11 @@
 {
-  "name": "rex-meets-ralph",
+  "name": "@klaudworks/rex",
   "version": "0.1.1",
   "description": "State-machine workflow orchestrator CLI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/klaudworks/ralph-meets-rex"
+  },
   "type": "module",
   "files": [
     "dist",
@@ -10,6 +14,9 @@
   ],
   "bin": {
     "rex": "dist/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "dev": "bun run src/index.ts",

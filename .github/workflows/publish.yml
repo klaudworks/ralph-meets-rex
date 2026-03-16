@@ -55,7 +55,7 @@ jobs:
 
             Install with:
             ```
-            npm install rex-meets-ralph@${{ github.ref_name }}
+            npm install -g @klaudworks/rex@${{ github.ref_name }}
             ```
           draft: false
           prerelease: false
