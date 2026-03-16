@@ -48,23 +48,21 @@ decides the code-level details.
 
 ## Output
 
-Emit exactly one `<rex_output>` block at the end of your response.
+Emit `<rex:*>` tags at the end of your response. Rex parses these automatically.
 
 For valid issues (proceeds to implementation):
-```xml
-<rex_output>
-  <status>done</status>
-  <summary>One-line summary of the plan</summary>
-  <plan>The full implementation plan</plan>
-</rex_output>
+
+```
+<rex:status>done</rex:status>
+<rex:summary>One-line summary of the plan</rex:summary>
+<rex:plan>The full implementation plan</rex:plan>
 ```
 
 For rejected issues (terminates the workflow):
-```xml
-<rex_output>
-  <status>done</status>
-  <next_state>done</next_state>
-  <summary>Why this issue was rejected</summary>
-  <plan>N/A</plan>
-</rex_output>
+
+```
+<rex:status>done</rex:status>
+<rex:next_state>done</rex:next_state>
+<rex:summary>Why this issue was rejected</rex:summary>
+<rex:plan>N/A</rex:plan>
 ```

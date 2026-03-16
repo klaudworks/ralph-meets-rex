@@ -192,6 +192,7 @@ export async function runWorkflow(
         return runState;
       }
 
+      ui.stepOutputs(stepOutput.values);
       applyOutputToContext(runState.context, step.id, stepOutput.values);
 
       const nextState = stepOutput.next_state ?? step.default_next;

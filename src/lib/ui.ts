@@ -33,6 +33,34 @@ function truncate(text: string, maxLength: number): string {
   return text.slice(0, maxLength - 3) + "...";
 }
 
+/**
+ * Word-wrap text to fit within a given width.
+ * Returns an array of lines.
+ */
+function wrapText(text: string, maxWidth: number): string[] {
+  if (text.length <= maxWidth) {
+    return [text];
+  }
+
+  const lines: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > maxWidth) {
+    let breakAt = remaining.lastIndexOf(" ", maxWidth);
+    if (breakAt <= 0) {
+      breakAt = maxWidth;
+    }
+    lines.push(remaining.slice(0, breakAt));
+    remaining = remaining.slice(breakAt).trimStart();
+  }
+
+  if (remaining) {
+    lines.push(remaining);
+  }
+
+  return lines;
+}
+
 export const ui = {
   /**
    * Check if output is a TTY (for conditional formatting).
@@ -73,7 +101,7 @@ export const ui = {
     const valueWidth = contentWidth - labelWidth;
 
     const formatLine = (label: string, value: string): string => {
-      const paddedLabel = `${label}:`.padEnd(labelWidth);
+      const paddedLabel = label ? `${label}:`.padEnd(labelWidth) : " ".repeat(labelWidth);
       const truncatedValue = truncate(value, valueWidth);
       return `${paddedLabel}${truncatedValue}`.padEnd(contentWidth);
     };
@@ -100,12 +128,17 @@ export const ui = {
         : `│ ${formatLine("step", info.currentStep)} │\n`
     );
 
-    const taskTruncated = truncate(info.task, valueWidth);
-    process.stdout.write(
-      isTTY
-        ? chalk.dim(`│ ${formatLine("task", taskTruncated)} │\n`)
-        : `│ ${formatLine("task", taskTruncated)} │\n`
-    );
+    // Word-wrap the task across multiple lines, aligned to value column
+    const taskLines = wrapText(info.task, valueWidth);
+    for (let i = 0; i < taskLines.length; i++) {
+      const label = i === 0 ? "task" : "";
+      const content = formatLine(label, taskLines[i] ?? "");
+      process.stdout.write(
+        isTTY
+          ? chalk.dim(`│ ${content} │\n`)
+          : `│ ${content} │\n`
+      );
+    }
 
     process.stdout.write(
       isTTY
@@ -189,6 +222,66 @@ export const ui = {
       process.stderr.write(chalk.cyan(`  ${toolName} `) + chalk.dim(truncatedInput) + "\n");
     } else {
       process.stderr.write(`  ${toolName} ${truncatedInput}\n`);
+    }
+  },
+
+  /**
+   * Print detected rex: output tags after a step completes.
+   */
+  stepOutputs(values: Record<string, string>): void {
+    const entries = Object.entries(values);
+    if (entries.length === 0) {
+      return;
+    }
+
+    const width = getBoxWidth();
+    const labelPrefix = "  ";
+    const separator = ": ";
+
+    process.stdout.write("\n");
+    for (const [key, value] of entries) {
+      const label = `rex:${key}`;
+      const firstLineIndent = labelPrefix.length + label.length + separator.length;
+      const continuationIndent = " ".repeat(firstLineIndent);
+      const maxValueWidth = width - firstLineIndent;
+
+      // Split value into lines, wrap each to fit
+      const valueLines = value.split("\n");
+      const wrappedLines: string[] = [];
+      for (const vline of valueLines) {
+        if (vline.length <= maxValueWidth) {
+          wrappedLines.push(vline);
+        } else {
+          // Word-wrap long lines
+          let remaining = vline;
+          while (remaining.length > maxValueWidth) {
+            let breakAt = remaining.lastIndexOf(" ", maxValueWidth);
+            if (breakAt <= 0) {
+              breakAt = maxValueWidth;
+            }
+            wrappedLines.push(remaining.slice(0, breakAt));
+            remaining = remaining.slice(breakAt).trimStart();
+          }
+          if (remaining) {
+            wrappedLines.push(remaining);
+          }
+        }
+      }
+
+      const firstLine = wrappedLines[0] ?? "";
+      if (isTTY) {
+        process.stdout.write(chalk.cyan(`${labelPrefix}${label}`) + chalk.dim(`${separator}${firstLine}`) + "\n");
+      } else {
+        process.stdout.write(`${labelPrefix}${label}${separator}${firstLine}\n`);
+      }
+
+      for (let i = 1; i < wrappedLines.length; i++) {
+        if (isTTY) {
+          process.stdout.write(chalk.dim(`${continuationIndent}${wrappedLines[i]}`) + "\n");
+        } else {
+          process.stdout.write(`${continuationIndent}${wrappedLines[i]}\n`);
+        }
+      }
     }
   },
 

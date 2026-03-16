@@ -7,7 +7,6 @@ import type { ProviderName, WorkflowDefinition } from "./types";
 
 const SUPPORTED_PROVIDERS = new Set<ProviderName>([
   "claude",
-  "claude-code",
   "opencode",
   "codex",
   "copilot"
