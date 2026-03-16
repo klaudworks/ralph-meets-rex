@@ -63,6 +63,22 @@ function wrapText(text: string, maxWidth: number): string[] {
   return lines;
 }
 
+/**
+ * Strip ANSI escape sequences from terminal output.
+ */
+function stripAnsi(text: string): string {
+  return text
+    .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")
+    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, "");
+}
+
+/**
+ * Rough display width in monospace columns.
+ */
+function displayWidth(text: string): number {
+  return Array.from(text).length;
+}
+
 export const ui = {
   /**
    * Check if output is a TTY (for conditional formatting).
@@ -352,7 +368,7 @@ export const ui = {
 
   /**
    * Prompt the user for multiline input.
-   * Submit with Enter, insert newline with Shift+Enter (when supported).
+   * Enter inserts a newline. Ctrl+D submits.
    */
   multilinePrompt(message: string): Promise<string> {
     return new Promise((resolve) => {
@@ -361,10 +377,11 @@ export const ui = {
       const supportsRawMode = input.isTTY && typeof input.setRawMode === "function";
       const styledMessage = isTTY ? chalk.cyan(message) : message;
       const linePrompt = isTTY ? chalk.cyan("> ") : "> ";
-      const shiftEnterSequence = "\x1b[13;2u";
+      const promptWidth = displayWidth(stripAnsi(linePrompt));
       let buffer = "";
+      let cursor = 0;
       let settled = false;
-      let renderedLineCount = 0;
+      let renderedRowCount = 0;
 
       if (!supportsRawMode) {
         const rl = readline.createInterface({
@@ -397,15 +414,55 @@ export const ui = {
       };
 
       const clearRenderedBuffer = () => {
-        if (renderedLineCount === 0) {
+        if (renderedRowCount === 0) {
           return;
         }
 
         readline.cursorTo(output, 0);
-        if (renderedLineCount > 1) {
-          readline.moveCursor(output, 0, -(renderedLineCount - 1));
+        if (renderedRowCount > 1) {
+          readline.moveCursor(output, 0, -(renderedRowCount - 1));
         }
         readline.clearScreenDown(output);
+      };
+
+      const getRenderedRowCount = (lines: string[]): number => {
+        const columns = Math.max(1, getTerminalWidth());
+        let rows = 0;
+
+        for (const line of lines) {
+          const lineWidth = promptWidth + displayWidth(line);
+          rows += Math.max(1, Math.ceil(lineWidth / columns));
+        }
+
+        return rows;
+      };
+
+      // Get which line the cursor is on and the column within that line
+      const getCursorPosition = (): { line: number; col: number } => {
+        const textBeforeCursor = buffer.slice(0, cursor);
+        const linesBeforeCursor = textBeforeCursor.split("\n");
+        const line = linesBeforeCursor.length - 1;
+        const col = linesBeforeCursor[line]?.length ?? 0;
+        return { line, col };
+      };
+
+      // Get the start index in buffer for a given line number
+      const getLineStart = (lineNum: number): number => {
+        const lines = buffer.split("\n");
+        let idx = 0;
+        for (let i = 0; i < lineNum && i < lines.length; i++) {
+          idx += (lines[i]?.length ?? 0) + 1; // +1 for newline
+        }
+        return idx;
+      };
+
+      // Get the end index in buffer for a given line number (before the newline)
+      const getLineEnd = (lineNum: number): number => {
+        const lines = buffer.split("\n");
+        if (lineNum >= lines.length) {
+          return buffer.length;
+        }
+        return getLineStart(lineNum) + (lines[lineNum]?.length ?? 0);
       };
 
       const renderBuffer = () => {
@@ -417,19 +474,70 @@ export const ui = {
             output.write("\n");
           }
         }
-        renderedLineCount = lines.length;
+        renderedRowCount = getRenderedRowCount(lines);
+
+        // Position the cursor correctly
+        const { line: cursorLine, col: cursorCol } = getCursorPosition();
+        const columns = Math.max(1, getTerminalWidth());
+
+        // Calculate how many rows from the end of buffer to the cursor position
+        let rowsFromEnd = 0;
+        for (let i = lines.length - 1; i > cursorLine; i--) {
+          const lineWidth = promptWidth + displayWidth(lines[i] ?? "");
+          rowsFromEnd += Math.max(1, Math.ceil(lineWidth / columns));
+        }
+
+        // Calculate cursor's row within its line (for wrapped lines)
+        const cursorLineWidth = promptWidth + cursorCol;
+        const totalLineWidth = promptWidth + displayWidth(lines[cursorLine] ?? "");
+        const totalRowsInCursorLine = Math.max(1, Math.ceil(totalLineWidth / columns));
+        const cursorRowInLine = Math.floor(cursorLineWidth / columns);
+        const rowsAfterCursorInLine = totalRowsInCursorLine - cursorRowInLine - 1;
+        rowsFromEnd += rowsAfterCursorInLine;
+
+        // Move cursor up and to correct column
+        if (rowsFromEnd > 0) {
+          readline.moveCursor(output, 0, -rowsFromEnd);
+        }
+        readline.cursorTo(output, cursorLineWidth % columns);
       };
 
-      const appendText = (text: string) => {
+      const insertText = (text: string) => {
         const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
         if (!normalized) {
           return;
         }
-        buffer += normalized;
+        buffer = buffer.slice(0, cursor) + normalized + buffer.slice(cursor);
+        cursor += normalized.length;
         renderBuffer();
       };
 
       const submit = () => {
+        // Move cursor to end before submitting for clean output
+        const lines = buffer.split("\n");
+        const lastLineIdx = lines.length - 1;
+        const columns = Math.max(1, getTerminalWidth());
+        const { line: cursorLine } = getCursorPosition();
+
+        // Calculate rows to move down to reach the end
+        let rowsToEnd = 0;
+        for (let i = cursorLine + 1; i < lines.length; i++) {
+          const lineWidth = promptWidth + displayWidth(lines[i] ?? "");
+          rowsToEnd += Math.max(1, Math.ceil(lineWidth / columns));
+        }
+        // Add remaining rows in current line if it wraps
+        const cursorLineWidth = promptWidth + displayWidth(lines[cursorLine] ?? "");
+        const totalRowsInCursorLine = Math.max(1, Math.ceil(cursorLineWidth / columns));
+        const { col: cursorCol } = getCursorPosition();
+        const cursorRowInLine = Math.floor((promptWidth + cursorCol) / columns);
+        rowsToEnd += totalRowsInCursorLine - cursorRowInLine - 1;
+
+        if (rowsToEnd > 0) {
+          readline.moveCursor(output, 0, rowsToEnd);
+        }
+        const lastLineWidth = promptWidth + displayWidth(lines[lastLineIdx] ?? "");
+        readline.cursorTo(output, lastLineWidth % columns);
+
         output.write("\n");
         finish(buffer);
       };
@@ -446,49 +554,166 @@ export const ui = {
       const onData = (chunk: string | Buffer) => {
         const value = typeof chunk === "string" ? chunk : chunk.toString("utf8");
 
+        // Ctrl+C - cancel
         if (value === "\x03") {
           cancel();
           return;
         }
 
+        // Ctrl+D - submit
         if (value === "\x04") {
           submit();
           return;
         }
 
-        if (value === shiftEnterSequence) {
-          appendText("\n");
+        // Ctrl+A - jump to start of current line
+        if (value === "\x01") {
+          const { line } = getCursorPosition();
+          cursor = getLineStart(line);
+          renderBuffer();
           return;
         }
 
+        // Ctrl+E - jump to end of current line
+        if (value === "\x05") {
+          const { line } = getCursorPosition();
+          cursor = getLineEnd(line);
+          renderBuffer();
+          return;
+        }
+
+        // Ctrl+U - delete to start of current line
+        if (value === "\x15") {
+          const { line } = getCursorPosition();
+          const lineStart = getLineStart(line);
+          buffer = buffer.slice(0, lineStart) + buffer.slice(cursor);
+          cursor = lineStart;
+          renderBuffer();
+          return;
+        }
+
+        // Ctrl+W - delete word backward
+        if (value === "\x17") {
+          if (cursor === 0) {
+            return;
+          }
+          // Find word boundary backward
+          let newCursor = cursor - 1;
+          // Skip trailing whitespace/newlines
+          while (newCursor > 0 && /\s/.test(buffer[newCursor] ?? "")) {
+            newCursor--;
+          }
+          // Delete until whitespace or start
+          while (newCursor > 0 && !/\s/.test(buffer[newCursor - 1] ?? "")) {
+            newCursor--;
+          }
+          buffer = buffer.slice(0, newCursor) + buffer.slice(cursor);
+          cursor = newCursor;
+          renderBuffer();
+          return;
+        }
+
+        // Enter/Return - insert newline at cursor
         if (value === "\r" || value === "\n") {
-          submit();
+          insertText("\n");
           return;
         }
 
+        // Backspace - delete character before cursor
         if (value === "\x7f" || value === "\b") {
-          if (buffer.length > 0) {
-            buffer = buffer.slice(0, -1);
+          if (cursor > 0) {
+            buffer = buffer.slice(0, cursor - 1) + buffer.slice(cursor);
+            cursor--;
             renderBuffer();
           }
           return;
         }
 
+        // Handle escape sequences and multi-byte input
         if (value.length > 1) {
           const withoutBracketedPasteMarkers = value
             .replace(/\x1b\[200~/g, "")
             .replace(/\x1b\[201~/g, "");
 
-          if (withoutBracketedPasteMarkers.startsWith("\x1b") && !/[\r\n]/.test(withoutBracketedPasteMarkers)) {
-            return;
+          // Arrow keys and other escape sequences
+          if (withoutBracketedPasteMarkers.startsWith("\x1b")) {
+            const seq = withoutBracketedPasteMarkers;
+
+            // Left arrow
+            if (seq === "\x1b[D") {
+              if (cursor > 0) {
+                cursor--;
+                renderBuffer();
+              }
+              return;
+            }
+
+            // Right arrow
+            if (seq === "\x1b[C") {
+              if (cursor < buffer.length) {
+                cursor++;
+                renderBuffer();
+              }
+              return;
+            }
+
+            // Up arrow - move to previous line, same column
+            if (seq === "\x1b[A") {
+              const { line, col } = getCursorPosition();
+              if (line > 0) {
+                const prevLineStart = getLineStart(line - 1);
+                const prevLineEnd = getLineEnd(line - 1);
+                const prevLineLen = prevLineEnd - prevLineStart;
+                cursor = prevLineStart + Math.min(col, prevLineLen);
+                renderBuffer();
+              }
+              return;
+            }
+
+            // Down arrow - move to next line, same column
+            if (seq === "\x1b[B") {
+              const lines = buffer.split("\n");
+              const { line, col } = getCursorPosition();
+              if (line < lines.length - 1) {
+                const nextLineStart = getLineStart(line + 1);
+                const nextLineEnd = getLineEnd(line + 1);
+                const nextLineLen = nextLineEnd - nextLineStart;
+                cursor = nextLineStart + Math.min(col, nextLineLen);
+                renderBuffer();
+              }
+              return;
+            }
+
+            // Home key (various sequences)
+            if (seq === "\x1b[H" || seq === "\x1b[1~" || seq === "\x1bOH") {
+              const { line } = getCursorPosition();
+              cursor = getLineStart(line);
+              renderBuffer();
+              return;
+            }
+
+            // End key (various sequences)
+            if (seq === "\x1b[F" || seq === "\x1b[4~" || seq === "\x1bOF") {
+              const { line } = getCursorPosition();
+              cursor = getLineEnd(line);
+              renderBuffer();
+              return;
+            }
+
+            // Unknown escape sequence - ignore it
+            if (!/[\r\n]/.test(withoutBracketedPasteMarkers)) {
+              return;
+            }
           }
 
-          appendText(withoutBracketedPasteMarkers);
+          // Pasted text - insert at cursor
+          insertText(withoutBracketedPasteMarkers);
           return;
         }
 
+        // Regular printable character - insert at cursor
         if (value >= " ") {
-          appendText(value);
+          insertText(value);
         }
       };
 
