@@ -87,7 +87,7 @@ export class RunCommand extends Command {
     description: "Disable provider auto-approval flags."
   });
 
-  private async resolveTask(): Promise<string> {
+  private async resolveTask(): Promise<{ task: string; displayTask: string }> {
     if (this.taskFile && this.taskFlag) {
       throw new UserInputError("Cannot specify both --task and --task-file.");
     }
@@ -103,7 +103,8 @@ export class RunCommand extends Command {
     if (this.taskFile) {
       try {
         const content = await readFile(resolve(this.taskFile), "utf-8");
-        return content.trim();
+        const task = content.trim();
+        return { task, displayTask: `(file: ${this.taskFile})` };
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown error";
         throw new UserInputError(`Failed to read task file "${this.taskFile}": ${message}`);
@@ -111,11 +112,11 @@ export class RunCommand extends Command {
     }
 
     if (this.taskFlag) {
-      return this.taskFlag;
+      return { task: this.taskFlag, displayTask: this.taskFlag };
     }
 
     if (this.positionalTask) {
-      return this.positionalTask;
+      return { task: this.positionalTask, displayTask: this.positionalTask };
     }
 
     throw new UserInputError("No task provided. Use positional argument, --task, or --task-file.");
@@ -123,7 +124,7 @@ export class RunCommand extends Command {
 
   public async execute(): Promise<number> {
     const config = await loadConfig();
-    const task = await this.resolveTask();
+    const { task, displayTask } = await this.resolveTask();
     const providerOverride = parseProviderOverride(this.provider);
     const parsedVars = this.vars.map(parseVar);
     const effectiveAllowAll = this.noAllowAll ? false : this.allowAll;
@@ -141,10 +142,10 @@ export class RunCommand extends Command {
     const runPath = await saveRunState(config, runState);
 
     ui.workflowHeader({
-      title: "rex",
+      title: "rex config",
       workflow: workflowPath,
       workflowId: workflow.id,
-      task,
+      task: displayTask,
       runId: runState.run_id,
       currentStep: runState.current_step,
       runFile: runPath,

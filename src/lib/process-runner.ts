@@ -82,7 +82,6 @@ async function consumeStreamParsed(
   let sessionId: string | null = null;
   let lineBuf = "";
 
-  const toolCounts = new Map<string, number>();
   let lastTextWasContent = false;
 
   function processLine(line: string) {
@@ -92,9 +91,6 @@ async function consumeStreamParsed(
     }
 
     if (parsed.toolName) {
-      // Count the tool
-      toolCounts.set(parsed.toolName, (toolCounts.get(parsed.toolName) ?? 0) + 1);
-
       // Add newline separator if we were outputting content
       if (lastTextWasContent) {
         process.stderr.write("\n");
@@ -139,15 +135,6 @@ async function consumeStreamParsed(
   rawOutput += decoder.decode();
   if (lineBuf.trim()) {
     processLine(lineBuf);
-  }
-
-  // Print final tool summary if tools were used
-  if (toolCounts.size > 0) {
-    if (lastTextWasContent) {
-      process.stderr.write("\n");
-    }
-    const summary = ui.toolSummary(toolCounts);
-    ui.printToolLine(summary, false);
   }
 
   return { rawOutput, displayText, sessionId };
