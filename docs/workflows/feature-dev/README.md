@@ -24,12 +24,13 @@ Or point to a task file:
 rmr run .rmr/workflows/feature-dev/workflow.yaml --task-file task.md
 ```
 
-## Agents
+## Files
 
-| Agent     | File               | Role                                                                         |
-| --------- | ------------------ | ---------------------------------------------------------------------------- |
-| planner   | [`planner-agent.md`](../../../examples/workflows/feature-dev/planner-agent.md) | Validates the task, researches the codebase, produces an implementation plan |
-| developer | [`tackle-agent.md`](../../../examples/workflows/feature-dev/tackle-agent.md)  | Implements the plan, runs tests, commits                                     |
-| reviewer  | [`review-agent.md`](../../../examples/workflows/feature-dev/review-agent.md)  | Reviews the diff, approves / requests changes / escalates                    |
+| File                 | Role                                                                         |
+| -------------------- | ---------------------------------------------------------------------------- |
+| [`workflow.yaml`](../../../examples/workflows/feature-dev/workflow.yaml)       | Workflow definition — wires the three agents together                         |
+| [`planner-agent.md`](../../../examples/workflows/feature-dev/planner-agent.md) | Validates the task, researches the codebase, produces an implementation plan |
+| [`tackle-agent.md`](../../../examples/workflows/feature-dev/tackle-agent.md)   | Implements the plan, runs tests, commits                                     |
+| [`review-agent.md`](../../../examples/workflows/feature-dev/review-agent.md)   | Reviews the diff, approves / requests changes / escalates                    |
 
-All agent prompts live in `.rmr/workflows/feature-dev/` next to `workflow.yaml`. Edit them to customize behavior.
+All files live in `.rmr/workflows/feature-dev/` after install. Edit them to customize behavior.
