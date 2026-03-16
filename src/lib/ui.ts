@@ -342,6 +342,9 @@ export const ui = {
     process.stdout.write(isTTY ? chalk.dim("Resume workflow:\n") : "Resume workflow:\n");
     process.stdout.write(`  ${binaryName} continue ${info.runId}\n`);
     process.stdout.write("\n");
+    process.stdout.write(isTTY ? chalk.dim("Resume with a hint:\n") : "Resume with a hint:\n");
+    process.stdout.write(`  ${binaryName} continue ${info.runId} --hint "your guidance here"\n`);
+    process.stdout.write("\n");
     process.stdout.write(isTTY ? chalk.dim("Resume agent session directly:\n") : "Resume agent session directly:\n");
     process.stdout.write(`  ${info.resumeCommand}\n`);
     process.stdout.write("\n");
