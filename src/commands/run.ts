@@ -4,23 +4,7 @@ import { resolve } from "node:path";
 
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
-import type { ProviderName } from "../lib/types";
-
-const PROVIDERS: ProviderName[] = ["claude", "opencode", "codex", "copilot"];
-
-function parseProviderOverride(value: string | undefined): ProviderName | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  if (!PROVIDERS.includes(value as ProviderName)) {
-    throw new UserInputError(
-      `Invalid provider override "${value}". Expected one of: ${PROVIDERS.join(", ")}.`
-    );
-  }
-
-  return value as ProviderName;
-}
+import { parseProviderOverride, type ProviderName } from "../lib/types";
 import { logger } from "../lib/logger";
 import { createInitialRunState, generateRunId, saveRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
@@ -182,7 +166,7 @@ export class RunCommand extends Command {
 
     await runWorkflow(config, workflow, runState, {
       allowAll: effectiveAllowAll,
-      overrides: Object.keys(overrides).length > 0 ? overrides : undefined
+      ...(Object.keys(overrides).length > 0 && { overrides })
     });
 
     return 0;

@@ -1,28 +1,11 @@
 import { Command, Option } from "clipanion";
 
 import { loadConfig } from "../lib/config";
-import { UserInputError } from "../lib/errors";
 import { logger } from "../lib/logger";
 import { loadRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
-import type { ProviderName } from "../lib/types";
+import { parseProviderOverride, type ProviderName } from "../lib/types";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
-
-const PROVIDERS: ProviderName[] = ["claude", "claude-code", "opencode", "codex", "copilot"];
-
-function parseProviderOverride(value: string | undefined): ProviderName | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  if (!PROVIDERS.includes(value as ProviderName)) {
-    throw new UserInputError(
-      `Invalid provider override "${value}". Expected one of: ${PROVIDERS.join(", ")}.`
-    );
-  }
-
-  return value as ProviderName;
-}
 
 export class ContinueCommand extends Command {
   public static paths = [["continue"]];
