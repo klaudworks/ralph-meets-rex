@@ -15,6 +15,7 @@ export interface StreamParsedChunk {
   text: string;
   sessionId?: string | undefined;
   toolName?: string | undefined;
+  toolInput?: string | undefined;
 }
 
 export type StreamLineParser = (line: string) => StreamParsedChunk | null;
@@ -28,12 +29,12 @@ export interface ProviderAdapter {
     options: ProviderAdapterOptions
   ): ProviderCommand;
   /**
-   * Parse a single stdout line and return displayable text + optional session id.
-   * Return null if the line should be skipped.
+   * Create a fresh parser for a single provider run.
+   * The parser processes stdout lines and returns displayable text + optional metadata.
    * Providers with structured output (e.g. stream-json) parse and extract text.
    * Providers without structured output use a passthrough parser.
    */
-  parseStreamLine: StreamLineParser;
+  createStreamParser(): StreamLineParser;
   resumeTemplate(sessionId: string): string;
 }
 
@@ -57,53 +58,92 @@ function claudeStreamFlags(): string[] {
   return ["--output-format", "stream-json", "--verbose", "--include-partial-messages"];
 }
 
-function parseClaudeStreamLine(line: string): StreamParsedChunk | null {
-  if (!line.trim()) {
-    return null;
-  }
+/**
+ * Create a stateful parser for Claude stream-json output.
+ * Tracks current tool block to accumulate input JSON deltas.
+ */
+function createClaudeStreamParser(): StreamLineParser {
+  let currentToolName: string | null = null;
+  let currentToolInput = "";
+  let currentBlockIndex: number | null = null;
 
-  let obj: Record<string, unknown>;
-  try {
-    obj = JSON.parse(line);
-  } catch {
-    return null;
-  }
+  return (line: string): StreamParsedChunk | null => {
+    if (!line.trim()) {
+      return null;
+    }
 
-  const type = obj.type as string | undefined;
+    let obj: Record<string, unknown>;
+    try {
+      obj = JSON.parse(line);
+    } catch {
+      return null;
+    }
 
-  // Extract session_id from any event that carries it
-  const sessionId = typeof obj.session_id === "string" ? obj.session_id : undefined;
+    const type = obj.type as string | undefined;
 
-  if (type === "stream_event") {
-    const event = obj.event as Record<string, unknown> | undefined;
-    if (event?.type === "content_block_delta") {
-      const delta = event.delta as Record<string, unknown> | undefined;
-      if (delta?.type === "text_delta" && typeof delta.text === "string") {
-        return { text: delta.text, sessionId };
+    // Extract session_id from any event that carries it
+    const sessionId = typeof obj.session_id === "string" ? obj.session_id : undefined;
+
+    if (type === "stream_event") {
+      const event = obj.event as Record<string, unknown> | undefined;
+      const index = typeof event?.index === "number" ? event.index : null;
+
+      if (event?.type === "content_block_start") {
+        const block = event.content_block as Record<string, unknown> | undefined;
+        if (block?.type === "tool_use" && typeof block.name === "string") {
+          // Start of a new tool block
+          currentToolName = block.name;
+          currentToolInput = "";
+          currentBlockIndex = index;
+          // Don't emit yet - wait for input
+          return sessionId ? { text: "", sessionId } : null;
+        }
       }
-      // input_json_delta — tool input streaming, skip display
+
+      if (event?.type === "content_block_delta") {
+        const delta = event.delta as Record<string, unknown> | undefined;
+        if (delta?.type === "text_delta" && typeof delta.text === "string") {
+          return { text: delta.text, sessionId };
+        }
+        if (delta?.type === "input_json_delta" && typeof delta.partial_json === "string") {
+          // Accumulate tool input JSON
+          currentToolInput += delta.partial_json;
+          return sessionId ? { text: "", sessionId } : null;
+        }
+        return sessionId ? { text: "", sessionId } : null;
+      }
+
+      if (event?.type === "content_block_stop") {
+        // Block finished - if this was a tool block, emit it now with accumulated input
+        if (currentToolName && index === currentBlockIndex) {
+          const result: StreamParsedChunk = {
+            text: "",
+            sessionId,
+            toolName: currentToolName,
+            toolInput: currentToolInput || undefined
+          };
+          currentToolName = null;
+          currentToolInput = "";
+          currentBlockIndex = null;
+          return result;
+        }
+      }
+
+      // Other stream events (message_start, etc.) — skip display
       return sessionId ? { text: "", sessionId } : null;
     }
-    if (event?.type === "content_block_start") {
-      const block = event.content_block as Record<string, unknown> | undefined;
-      if (block?.type === "tool_use" && typeof block.name === "string") {
-        return { text: "", sessionId, toolName: block.name };
-      }
+
+    if (type === "result") {
+      // Final result — text already displayed via deltas, just capture session_id
+      return sessionId ? { text: "", sessionId } : null;
     }
-    // Other stream events (message_start, content_block_stop, etc.) — skip display
-    return sessionId ? { text: "", sessionId } : null;
-  }
 
-  if (type === "result") {
-    // Final result — text already displayed via deltas, just capture session_id
-    return sessionId ? { text: "", sessionId } : null;
-  }
+    if (type === "system") {
+      return sessionId ? { text: "", sessionId } : null;
+    }
 
-  if (type === "system") {
-    return sessionId ? { text: "", sessionId } : null;
-  }
-
-  return null;
+    return null;
+  };
 }
 
 const adapters: Record<ProviderName, ProviderAdapter> = {
@@ -115,10 +155,11 @@ const adapters: Record<ProviderName, ProviderAdapter> = {
       return { binary: "claude", args: withModelArgs(options.model, [...allowArgs, ...base]) };
     },
     buildResumeCommand(sessionId, prompt, options) {
-      const base = ["--resume", sessionId, "-p", prompt, ...claudeStreamFlags()];
+      const allowArgs = options.allowAll ? ["--dangerously-skip-permissions"] : [];
+      const base = [...allowArgs, "--resume", sessionId, "-p", prompt, ...claudeStreamFlags()];
       return { binary: "claude", args: withModelArgs(options.model, base) };
     },
-    parseStreamLine: parseClaudeStreamLine,
+    createStreamParser: createClaudeStreamParser,
     resumeTemplate(sessionId) {
       return `claude --resume ${sessionId}`;
     }
@@ -133,7 +174,7 @@ const adapters: Record<ProviderName, ProviderAdapter> = {
       const args = ["--resume", sessionId, "run", prompt];
       return { binary: "opencode", args: withModelArgs(options.model, args) };
     },
-    parseStreamLine: createPassthroughParser(),
+    createStreamParser: createPassthroughParser,
     resumeTemplate(sessionId) {
       return `opencode --resume ${sessionId}`;
     }
@@ -149,7 +190,7 @@ const adapters: Record<ProviderName, ProviderAdapter> = {
       const args = ["exec", "resume", sessionId, prompt];
       return { binary: "codex", args: withModelArgs(options.model, args) };
     },
-    parseStreamLine: createPassthroughParser(),
+    createStreamParser: createPassthroughParser,
     resumeTemplate(sessionId) {
       return `codex exec resume ${sessionId} "<prompt>"`;
     }
@@ -165,7 +206,7 @@ const adapters: Record<ProviderName, ProviderAdapter> = {
       const args = ["-p", prompt];
       return { binary: "copilot", args: withModelArgs(options.model, args) };
     },
-    parseStreamLine: createPassthroughParser(),
+    createStreamParser: createPassthroughParser,
     resumeTemplate(sessionId) {
       return `copilot --resume ${sessionId}`;
     }

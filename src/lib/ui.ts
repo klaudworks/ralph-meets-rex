@@ -3,24 +3,34 @@
  * Provides consistent visual language for workflow execution.
  */
 
+import chalk from "chalk";
+
 const isTTY = process.stdout.isTTY === true;
 
-const colors = {
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
-  red: "\x1b[31m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  cyan: "\x1b[36m",
-  gray: "\x1b[90m"
-} as const;
+/**
+ * Get terminal width with fallback.
+ */
+function getTerminalWidth(): number {
+  return process.stdout.columns ?? 80;
+}
 
-function style(code: string, text: string): string {
-  if (!isTTY) {
+/**
+ * Get box width - full terminal width minus small margin.
+ */
+function getBoxWidth(): number {
+  const termWidth = getTerminalWidth();
+  // Leave 2 char margin on right side
+  return Math.max(40, termWidth - 2);
+}
+
+/**
+ * Truncate text to fit within a given width, adding ellipsis if needed.
+ */
+function truncate(text: string, maxLength: number): string {
+  if (text.length <= maxLength) {
     return text;
   }
-  return `${code}${text}${colors.reset}`;
+  return text.slice(0, maxLength - 3) + "...";
 }
 
 export const ui = {
@@ -37,7 +47,7 @@ export const ui = {
   workflowHeader(info: {
     title: string;
     workflow: string;
-    workflowId: string;
+    workflowId?: string;
     task: string;
     runId: string;
     currentStep: string;
@@ -55,20 +65,53 @@ export const ui = {
       br: isTTY ? "╯" : "+"
     };
 
-    const width = 60;
+    const width = getBoxWidth();
+    const contentWidth = width - 4; // Account for "│ " and " │"
     const border = line.repeat(width - 2);
 
+    const labelWidth = 10; // "workflow: " length
+    const valueWidth = contentWidth - labelWidth;
+
+    const formatLine = (label: string, value: string): string => {
+      const paddedLabel = `${label}:`.padEnd(labelWidth);
+      const truncatedValue = truncate(value, valueWidth);
+      return `${paddedLabel}${truncatedValue}`.padEnd(contentWidth);
+    };
+
     process.stdout.write("\n");
-    process.stdout.write(style(colors.cyan, `${corner.tl}${line} ${info.title} ${border.slice(info.title.length + 3)}${corner.tr}\n`));
-    process.stdout.write(style(colors.dim, `│ ${`workflow:    ${info.workflow}`.padEnd(width - 4)} │\n`));
-    process.stdout.write(style(colors.dim, `│ ${`workflow-id: ${info.workflowId}`.padEnd(width - 4)} │\n`));
-    process.stdout.write(style(colors.dim, `│ ${`run-id:      ${info.runId}`.padEnd(width - 4)} │\n`));
-    process.stdout.write(style(colors.dim, `│ ${`step:        ${info.currentStep}`.padEnd(width - 4)} │\n`));
+    process.stdout.write(
+      isTTY
+        ? chalk.cyan(`${corner.tl}${line} ${info.title} ${border.slice(info.title.length + 3)}${corner.tr}\n`)
+        : `${corner.tl}${line} ${info.title} ${border.slice(info.title.length + 3)}${corner.tr}\n`
+    );
+    process.stdout.write(
+      isTTY
+        ? chalk.dim(`│ ${formatLine("workflow", info.workflow)} │\n`)
+        : `│ ${formatLine("workflow", info.workflow)} │\n`
+    );
+    process.stdout.write(
+      isTTY
+        ? chalk.dim(`│ ${formatLine("run-id", info.runId)} │\n`)
+        : `│ ${formatLine("run-id", info.runId)} │\n`
+    );
+    process.stdout.write(
+      isTTY
+        ? chalk.dim(`│ ${formatLine("step", info.currentStep)} │\n`)
+        : `│ ${formatLine("step", info.currentStep)} │\n`
+    );
 
-    const taskLine = info.task.length > 40 ? info.task.slice(0, 37) + "..." : info.task;
-    process.stdout.write(style(colors.dim, `│ ${`task:        ${taskLine}`.padEnd(width - 4)} │\n`));
+    const taskTruncated = truncate(info.task, valueWidth);
+    process.stdout.write(
+      isTTY
+        ? chalk.dim(`│ ${formatLine("task", taskTruncated)} │\n`)
+        : `│ ${formatLine("task", taskTruncated)} │\n`
+    );
 
-    process.stdout.write(style(colors.cyan, `${corner.bl}${border}${corner.br}\n`));
+    process.stdout.write(
+      isTTY
+        ? chalk.cyan(`${corner.bl}${border}${corner.br}\n`)
+        : `${corner.bl}${border}${corner.br}\n`
+    );
     process.stdout.write("\n");
   },
 
@@ -79,12 +122,16 @@ export const ui = {
     const line = isTTY ? "─" : "-";
     const corner = { tl: isTTY ? "┌" : "+", tr: isTTY ? "┐" : "+" };
     const label = ` Step: ${stepId} (${agentId}) `;
-    const width = 60;
-    const remaining = width - label.length - 2;
+    const width = getBoxWidth();
+    const remaining = Math.max(0, width - label.length - 2);
     const border = line.repeat(remaining);
 
     process.stdout.write("\n");
-    process.stdout.write(style(colors.cyan + colors.bold, `${corner.tl}${line}${label}${border}${corner.tr}\n`));
+    process.stdout.write(
+      isTTY
+        ? chalk.cyan.bold(`${corner.tl}${line}${label}${border}${corner.tr}\n`)
+        : `${corner.tl}${line}${label}${border}${corner.tr}\n`
+    );
     process.stdout.write("\n");
   },
 
@@ -94,11 +141,15 @@ export const ui = {
   stepEnd(): void {
     const line = isTTY ? "─" : "-";
     const corner = { bl: isTTY ? "└" : "+", br: isTTY ? "┘" : "+" };
-    const width = 60;
+    const width = getBoxWidth();
     const border = line.repeat(width - 2);
 
     process.stdout.write("\n");
-    process.stdout.write(style(colors.cyan, `${corner.bl}${border}${corner.br}\n`));
+    process.stdout.write(
+      isTTY
+        ? chalk.cyan(`${corner.bl}${border}${corner.br}\n`)
+        : `${corner.bl}${border}${corner.br}\n`
+    );
   },
 
   /**
@@ -123,15 +174,21 @@ export const ui = {
       // Clear previous line before rewriting
       process.stderr.write(`\x1b[1A\x1b[2K`);
     }
-    process.stderr.write(style(colors.gray, `  tools: ${summary}\n`));
+    process.stderr.write(isTTY ? chalk.gray(`  tools: ${summary}\n`) : `  tools: ${summary}\n`);
   },
 
   /**
-   * Clear the current tool line (for resuming content output).
+   * Print a tool call with its input parameters.
    */
-  clearToolLine(): void {
+  printToolCall(toolName: string, toolInput: string): void {
+    const width = getBoxWidth();
+    const maxInputLength = width - 10; // Reserve space for "  ToolName "
+    const truncatedInput = truncate(toolInput, maxInputLength);
+
     if (isTTY) {
-      process.stderr.write(`\x1b[1A\x1b[2K`);
+      process.stderr.write(chalk.cyan(`  ${toolName} `) + chalk.dim(truncatedInput) + "\n");
+    } else {
+      process.stderr.write(`  ${toolName} ${truncatedInput}\n`);
     }
   },
 
@@ -147,7 +204,7 @@ export const ui = {
    */
   success(text: string): void {
     const icon = isTTY ? "✓ " : "";
-    process.stdout.write(style(colors.green, `${icon}${text}\n`));
+    process.stdout.write(isTTY ? chalk.green(`${icon}${text}\n`) : `${icon}${text}\n`);
   },
 
   /**
@@ -155,7 +212,7 @@ export const ui = {
    */
   warning(text: string): void {
     const icon = isTTY ? "⚠ " : "";
-    process.stderr.write(style(colors.yellow, `${icon}${text}\n`));
+    process.stderr.write(isTTY ? chalk.yellow(`${icon}${text}\n`) : `${icon}${text}\n`);
   },
 
   /**
@@ -163,7 +220,7 @@ export const ui = {
    */
   error(text: string): void {
     const icon = isTTY ? "✗ " : "";
-    process.stderr.write(style(colors.red, `${icon}${text}\n`));
+    process.stderr.write(isTTY ? chalk.red(`${icon}${text}\n`) : `${icon}${text}\n`);
   },
 
   /**
@@ -177,7 +234,7 @@ export const ui = {
    * Print dimmed text.
    */
   dim(text: string): void {
-    process.stdout.write(style(colors.gray, text));
+    process.stdout.write(isTTY ? chalk.gray(text) : text);
   },
 
   /**
@@ -188,16 +245,13 @@ export const ui = {
     runId: string;
     resumeCommand: string;
   }): void {
-    const line = isTTY ? "─" : "-";
-    const width = 60;
-
     process.stderr.write("\n");
     ui.warning(`Paused: ${info.reason}`);
     process.stderr.write("\n");
-    process.stdout.write(style(colors.dim, `Resume workflow:\n`));
+    process.stdout.write(isTTY ? chalk.dim("Resume workflow:\n") : "Resume workflow:\n");
     process.stdout.write(`  rex continue ${info.runId}\n`);
     process.stdout.write("\n");
-    process.stdout.write(style(colors.dim, `Resume agent session directly:\n`));
+    process.stdout.write(isTTY ? chalk.dim("Resume agent session directly:\n") : "Resume agent session directly:\n");
     process.stdout.write(`  ${info.resumeCommand}\n`);
     process.stdout.write("\n");
   }
