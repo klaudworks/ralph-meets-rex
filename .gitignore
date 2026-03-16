@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# local runtime artifacts
+.rex/
+!.rex/agents/
+!.rex/workflows/
+
+# package artifacts
+*.tgz
+
+# editor and OS noise
+.DS_Store
+.idea/
+.vscode/
+
+# local cache and planning docs
+.cache/
+plan/
