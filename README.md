@@ -7,14 +7,9 @@ Define multi-step coding workflows that match how you actually work. `rmr` orche
 ## Quick Start
 
 ```bash
-npx @klaudworks/rmr@latest install feature-dev  # add the feature-dev workflow
-npx @klaudworks/rmr@latest run .rmr/workflows/feature-dev/workflow.yaml --task "Implement feature X"  # run it
-```
-
-Using `npx` with `@latest` always runs the newest version. To avoid the prefix, install globally:
-
-```bash
-npm install -g @klaudworks/rmr@latest
+npm install -g @klaudworks/rmr
+rmr install feature-dev
+rmr run .rmr/workflows/feature-dev/workflow.yaml --task "Implement feature X"
 ```
 
 ## Sample Workflows

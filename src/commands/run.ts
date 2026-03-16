@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
 import { parseHarnessOverride, type HarnessName } from "../lib/types";
+import { startUpdateCheck } from "../lib/update-check";
 import { createInitialRunState, generateRunId, saveRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
@@ -120,6 +121,7 @@ export class RunCommand extends Command {
   }
 
   public async execute(): Promise<number> {
+    const showUpdateNotice = startUpdateCheck();
     const config = await loadConfig();
     const { task, displayTask } = await this.resolveTask();
     const harnessOverride = parseHarnessOverride(this.harness);
@@ -169,6 +171,7 @@ export class RunCommand extends Command {
       ...(Object.keys(overrides).length > 0 && { overrides })
     });
 
+    showUpdateNotice();
     return 0;
   }
 }
