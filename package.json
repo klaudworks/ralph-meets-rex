@@ -1,6 +1,6 @@
 {
   "name": "@klaudworks/rex",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "State-machine workflow orchestrator CLI",
   "repository": {
     "type": "git",
