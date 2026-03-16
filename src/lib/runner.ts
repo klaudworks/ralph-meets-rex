@@ -5,7 +5,7 @@ import { runProviderCommand } from "./process-runner";
 import { parseRexOutput, validateRequiredOutputKeys } from "./rex-output-parser";
 import { saveRunState } from "./run-state";
 import { assertRequiredInputs, resolveTemplate } from "./templating";
-import type { ProviderName, RunState, WorkflowDefinition, WorkflowStep } from "./types";
+import type { ProviderName, RunState, StepExecution, WorkflowDefinition, WorkflowStep } from "./types";
 import { ui } from "./ui";
 
 const HUMAN_SENTINEL = "HUMAN_INTERVENTION_REQUIRED";
@@ -88,6 +88,7 @@ export async function runWorkflow(
   }
 
   let isFirstIteration = true;
+  let stepNumber = runState.step_history.length + 1;
 
   while (runState.status === "running") {
     const step = findStep(workflow, runState.current_step);
@@ -114,7 +115,8 @@ export async function runWorkflow(
       return runState;
     }
 
-    ui.stepStart(step.id, agent.id);
+    const stepStartedAt = new Date().toISOString();
+    ui.stepStart(stepNumber, step.id, agent.id);
 
     try {
       assertRequiredInputs(step.input_required, runState.context);
@@ -225,6 +227,18 @@ export async function runWorkflow(
         );
         return runState;
       }
+
+      // Record step execution in history
+      const stepExecution: StepExecution = {
+        step_number: stepNumber,
+        step_id: step.id,
+        agent_id: agent.id,
+        session_id: runState.last_provider?.session_id ?? null,
+        started_at: stepStartedAt,
+        completed_at: new Date().toISOString()
+      };
+      runState.step_history.push(stepExecution);
+      stepNumber++;
 
       ui.stepEnd();
 
