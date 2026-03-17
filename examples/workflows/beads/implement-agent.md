@@ -12,8 +12,7 @@ Use issue comments as the source of truth for research context and plan.
 ## Workflow
 
 1. Determine issue id:
-   - Use `{{verify.issue_id}}` if present (loop-back from review).
-   - Otherwise use `{{plan.issue_id}}`.
+   - Use `{{plan.issue_id}}`.
 2. If needed, claim issue:
    `bd update <issue-id> --status in_progress --json | toon`
 3. Read issue comments once:
@@ -76,4 +75,3 @@ If blocked after 3 attempts:
 
 Reviewer feedback: {{verify.issues}}
 Planned issue: {{plan.issue_id}}
-Loop issue: {{verify.issue_id}}

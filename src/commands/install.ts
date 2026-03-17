@@ -91,13 +91,12 @@ export class InstallCommand extends BaseCommand {
       : `${binaryName} run ${installedWorkflowPath}`;
     const defaultHarness = getWorkflowDefaultHarness(sourceWorkflow);
     const harnessHint =
-      `To use codex or opencode, edit ${installedWorkflowPath} and change "harness:"` +
-      ` (optionally "model:").`;
+      `Default harness: ${defaultHarness}. ` +
+      `To use codex or opencode, edit ${installedWorkflowPath}.`;
 
     if (existsSync(destinationDir)) {
       ui.info(`Workflow already installed at .rmr/workflows/${this.workflowName}/`);
       ui.info(`Run it with: ${runHint}`);
-      ui.info(`Default harness: ${defaultHarness}`);
       ui.info(harnessHint);
       return 0;
     }
@@ -106,7 +105,6 @@ export class InstallCommand extends BaseCommand {
 
     ui.success(`installed .rmr/workflows/${this.workflowName}/`);
     ui.info(`Run it with: ${runHint}`);
-    ui.info(`Default harness: ${defaultHarness}`);
     ui.info(harnessHint);
     return 0;
   }

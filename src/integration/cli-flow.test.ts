@@ -175,10 +175,10 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
     expect(result.stdout).toContain(
       "Run it with: rmr run .rmr/workflows/feature-dev/workflow.yaml --task \"Describe your task\""
     );
-    expect(result.stdout).toContain("Default harness: claude");
     expect(result.stdout).toContain(
-      "To use codex or opencode, edit .rmr/workflows/feature-dev/workflow.yaml and change \"harness:\""
+      "Default harness: claude. To use codex or opencode, edit .rmr/workflows/feature-dev/workflow.yaml."
     );
+    expect(result.stdout).not.toContain('and change "harness:"');
 
     const installedWorkflow = await readFile(
       resolve(root, ".rmr", "workflows", "feature-dev", "workflow.yaml"),
@@ -198,10 +198,10 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
     expect(result.stdout).toContain("installed .rmr/workflows/beads/");
     expect(result.stdout).toContain("Run it with: rmr run .rmr/workflows/beads/workflow.yaml");
     expect(result.stdout).not.toContain("--task \"Describe your task\"");
-    expect(result.stdout).toContain("Default harness: claude");
     expect(result.stdout).toContain(
-      "To use codex or opencode, edit .rmr/workflows/beads/workflow.yaml and change \"harness:\""
+      "Default harness: claude. To use codex or opencode, edit .rmr/workflows/beads/workflow.yaml."
     );
+    expect(result.stdout).not.toContain('and change "harness:"');
 
     const installedWorkflow = await readFile(
       resolve(root, ".rmr", "workflows", "beads", "workflow.yaml"),
