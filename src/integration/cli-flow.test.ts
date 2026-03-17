@@ -89,6 +89,80 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
     expect(result.stdout).not.toContain("│ model:");
   });
 
+  test("run does not require --task when workflow has no task input", async () => {
+    const root = await mkdtemp(resolve(tmpdir(), "rmr-cli-"));
+    const fakeBinDir = resolve(root, "fake-bin");
+
+    await mkdir(resolve(root, ".rmr", "workflows"), { recursive: true });
+    await mkdir(fakeBinDir, { recursive: true });
+
+    const workflowPath = resolve(root, "workflow.yml");
+    await writeFile(resolve(root, "worker.md"), "You are worker\n\nReturn done.", "utf8");
+    await writeFile(
+      workflowPath,
+      `id: quick-task\nname: Quick Task\nharness: claude\nsteps:\n  - id: execute\n    prompt_file: worker.md\n    next_step: done\n    requires:\n      inputs: []\n      outputs: [result]\n`,
+      "utf8"
+    );
+
+    const fakeClaude = resolve(fakeBinDir, "claude");
+    await writeFile(
+      fakeClaude,
+      `#!/bin/sh
+echo '{"type":"system","subtype":"init","session_id":"fake-session-1"}'
+echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rmr:status>done</rmr:status><rmr:next_state>done</rmr:next_state><rmr:result>ok</rmr:result>"}},"session_id":"fake-session-1"}'
+echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result":"ok"}'
+`,
+      "utf8"
+    );
+    await chmod(fakeClaude, 0o755);
+
+    const result = await runCli(["run", workflowPath], root, {
+      ...process.env,
+      PATH: `${fakeBinDir}:${process.env.PATH ?? ""}`
+    } as Record<string, string>);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Run completed");
+    expect(result.stdout).toContain("(none)");
+    expect(result.stderr).not.toContain("No task provided");
+  });
+
+  test("run accepts --task for workflow with no task input", async () => {
+    const root = await mkdtemp(resolve(tmpdir(), "rmr-cli-"));
+    const fakeBinDir = resolve(root, "fake-bin");
+
+    await mkdir(resolve(root, ".rmr", "workflows"), { recursive: true });
+    await mkdir(fakeBinDir, { recursive: true });
+
+    const workflowPath = resolve(root, "workflow.yml");
+    await writeFile(resolve(root, "worker.md"), "You are worker\n\nReturn done.", "utf8");
+    await writeFile(
+      workflowPath,
+      `id: quick-task\nname: Quick Task\nharness: claude\nsteps:\n  - id: execute\n    prompt_file: worker.md\n    next_step: done\n    requires:\n      inputs: []\n      outputs: [result]\n`,
+      "utf8"
+    );
+
+    const fakeClaude = resolve(fakeBinDir, "claude");
+    await writeFile(
+      fakeClaude,
+      `#!/bin/sh
+echo '{"type":"system","subtype":"init","session_id":"fake-session-1"}'
+echo '{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"<rmr:status>done</rmr:status><rmr:next_state>done</rmr:next_state><rmr:result>ok</rmr:result>"}},"session_id":"fake-session-1"}'
+echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result":"ok"}'
+`,
+      "utf8"
+    );
+    await chmod(fakeClaude, 0o755);
+
+    const result = await runCli(["run", workflowPath, "--task", "ship it"], root, {
+      ...process.env,
+      PATH: `${fakeBinDir}:${process.env.PATH ?? ""}`
+    } as Record<string, string>);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Run completed");
+  });
+
   test("install copies bundled workflow into .rmr/workflows", async () => {
     const root = await mkdtemp(resolve(tmpdir(), "rmr-cli-"));
 

@@ -104,6 +104,10 @@ async function resolveWorkflowPath(inputPath: string): Promise<string> {
   }
 }
 
+function workflowRequiresTask(workflow: WorkflowDefinition): boolean {
+  return workflow.steps.some((step) => step.requires.inputs.includes("task"));
+}
+
 export class RunCommand extends BaseCommand {
   public static paths = [["run"]];
 
@@ -210,7 +214,9 @@ export class RunCommand extends BaseCommand {
       );
     }
 
-    const { task, displayTask } = await this.resolveTask();
+    const { task, displayTask } = workflowRequiresTask(workflow)
+      ? await this.resolveTask()
+      : { task: "", displayTask: "(none)" };
     const runId = generateRunId();
     const runState = createInitialRunState({
       runId,
