@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import path from "node:path";
 
 import { StorageError } from "./errors";
 import type { HarnessCommand, StreamLineParser } from "./harness-adapters";
@@ -15,21 +16,75 @@ export interface ProcessRunResult {
 /**
  * Format tool input for display, extracting key parameters.
  */
-function formatToolInput(toolInput: string): string {
+const PATH_PARAMETER_KEYS = new Set(["file_path", "filepath", "path", "notebook_path"]);
+const PARAMETER_MAX_LENGTH = 60;
+const RAW_INPUT_MAX_LENGTH = 100;
+
+function truncateFromEnd(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return value.slice(0, maxLength - 3) + "...";
+}
+
+function truncateFromBeginning(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return "..." + value.slice(-(maxLength - 3));
+}
+
+function isPathParameterKey(key: string): boolean {
+  return PATH_PARAMETER_KEYS.has(key.toLowerCase());
+}
+
+function looksLikeFilePath(value: string): boolean {
+  return (
+    path.isAbsolute(value) ||
+    value.includes("/") ||
+    value.includes("\\") ||
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    value.startsWith("~/")
+  );
+}
+
+function stripWorkspacePrefix(filePath: string, workspaceRoot: string): string {
+  if (!path.isAbsolute(filePath)) {
+    return filePath;
+  }
+
+  const relativePath = path.relative(workspaceRoot, filePath);
+  if (relativePath && !relativePath.startsWith("..") && !path.isAbsolute(relativePath)) {
+    return relativePath;
+  }
+  if (relativePath === "") {
+    return ".";
+  }
+
+  return filePath;
+}
+
+export function formatToolInput(toolInput: string): string {
   try {
     const parsed = JSON.parse(toolInput);
     const entries = Object.entries(parsed);
     if (entries.length === 0) {
       return "";
     }
+    const workspaceRoot = process.cwd();
     const parts = entries.map(([key, value]) => {
       const strValue = typeof value === "string" ? value : JSON.stringify(value);
-      const truncated = strValue.length > 60 ? strValue.slice(0, 57) + "..." : strValue;
+      const isPathLike = typeof value === "string" && isPathParameterKey(key) && looksLikeFilePath(value);
+      const formatted = isPathLike ? stripWorkspacePrefix(strValue, workspaceRoot) : strValue;
+      const truncated = isPathLike
+        ? truncateFromBeginning(formatted, PARAMETER_MAX_LENGTH)
+        : truncateFromEnd(formatted, PARAMETER_MAX_LENGTH);
       return `${key}=${truncated}`;
     });
     return parts.join(" ");
   } catch {
-    return toolInput.length > 100 ? toolInput.slice(0, 97) + "..." : toolInput;
+    return truncateFromEnd(toolInput, RAW_INPUT_MAX_LENGTH);
   }
 }
 
