@@ -8,6 +8,14 @@
 
 Inspired by [snarktank/antfarm](https://github.com/snarktank/antfarm).
 
+## Why rmr?
+
+Coding agents produce slop. Not because they're bad, but because "go make it work" is a bad prompt, the same way it's a bad brief for a human developer. You wouldn't hand someone a one-liner and expect clean, well-structured code back. Yet that's how most people use coding agents today.
+
+The fix is simple: break the work into steps. Plan first, then implement, then review. Loop back if the review finds problems. This is how good teams already work. rmr just lets you encode that process in a YAML file and run it automatically.
+
+It doesn't care how you plan (markdown files, Beads, Linear, whatever) or which agent you use (Claude Code, Codex, OpenCode). You can mix and match harnesses within a single workflow too, like using Claude for planning and Codex for implementation. It just makes sure each step gets the right context, the output flows to the next step, and you can pause and pick up where you left off.
+
 ## Quick Start
 
 **Instructions for humans**
