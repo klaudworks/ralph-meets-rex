@@ -1,6 +1,6 @@
 {
   "name": "@klaudworks/rmr",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Define multi-step coding workflows for AI agents",
   "license": "MIT",
   "repository": {
