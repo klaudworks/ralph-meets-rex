@@ -1,6 +1,7 @@
 id: feature-dev
 name: Feature Development
-harness: claude
+harness: claude # Default harness for all steps; set codex or opencode to switch.
+# model: <provider/model> # Optional: uncomment to pin a default model.
 
 steps:
   - id: plan

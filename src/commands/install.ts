@@ -1,6 +1,6 @@
 import { cp, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Command, Option } from "clipanion";
@@ -10,6 +10,8 @@ import { binaryName } from "../lib/binary-name";
 import { loadConfig } from "../lib/config";
 import { UserInputError } from "../lib/errors";
 import { ui } from "../lib/ui";
+import { getWorkflowDefaultHarness, workflowRequiresTask } from "../lib/workflow-utils";
+import { loadWorkflowDefinition } from "../lib/workflow-loader";
 
 function getExamplesWorkflowsDir(): string {
   const thisDir = dirname(fileURLToPath(import.meta.url));
@@ -23,6 +25,22 @@ function getExamplesWorkflowsDir(): string {
   if (existsSync(fromSrc)) return fromSrc;
 
   return fromSrc;
+}
+
+function resolveWorkflowFilePath(workflowDir: string): string {
+  const yamlPath = resolve(workflowDir, "workflow.yaml");
+  if (existsSync(yamlPath)) {
+    return yamlPath;
+  }
+
+  const ymlPath = resolve(workflowDir, "workflow.yml");
+  if (existsSync(ymlPath)) {
+    return ymlPath;
+  }
+
+  throw new UserInputError(
+    `Workflow directory does not contain workflow.yaml or workflow.yml: ${workflowDir}`
+  );
 }
 
 export class InstallCommand extends BaseCommand {
@@ -61,20 +79,35 @@ export class InstallCommand extends BaseCommand {
       throw new UserInputError(`Unknown workflow \"${this.workflowName}\".${hint}`);
     }
 
+    const sourceWorkflowPath = resolveWorkflowFilePath(sourceDir);
+    const sourceWorkflow = await loadWorkflowDefinition(sourceWorkflowPath).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new UserInputError(`Bundled workflow \"${this.workflowName}\" is invalid: ${message}`);
+    });
+    const workflowFileName = basename(sourceWorkflowPath);
+    const installedWorkflowPath = `.rmr/workflows/${this.workflowName}/${workflowFileName}`;
+    const runHint = workflowRequiresTask(sourceWorkflow)
+      ? `${binaryName} run ${installedWorkflowPath} --task "Describe your task"`
+      : `${binaryName} run ${installedWorkflowPath}`;
+    const defaultHarness = getWorkflowDefaultHarness(sourceWorkflow);
+    const harnessHint =
+      `To use codex or opencode, edit ${installedWorkflowPath} and change "harness:"` +
+      ` (optionally "model:").`;
+
     if (existsSync(destinationDir)) {
       ui.info(`Workflow already installed at .rmr/workflows/${this.workflowName}/`);
-      ui.info(
-        `Run it with: ${binaryName} run .rmr/workflows/${this.workflowName}/workflow.yaml --task "Describe your task"`
-      );
+      ui.info(`Run it with: ${runHint}`);
+      ui.info(`Default harness: ${defaultHarness}`);
+      ui.info(harnessHint);
       return 0;
     }
 
     await cp(sourceDir, destinationDir, { recursive: true, force: false, errorOnExist: true });
 
     ui.success(`installed .rmr/workflows/${this.workflowName}/`);
-    ui.info(
-      `Run it with: ${binaryName} run .rmr/workflows/${this.workflowName}/workflow.yaml --task "Describe your task"`
-    );
+    ui.info(`Run it with: ${runHint}`);
+    ui.info(`Default harness: ${defaultHarness}`);
+    ui.info(harnessHint);
     return 0;
   }
 }

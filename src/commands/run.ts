@@ -10,6 +10,7 @@ import type { WorkflowDefinition } from "../lib/types";
 import { startUpdateCheck } from "../lib/update-check";
 import { createInitialRunState, generateRunId, saveRunState } from "../lib/run-state";
 import { runWorkflow } from "../lib/runner";
+import { workflowRequiresTask } from "../lib/workflow-utils";
 import { loadWorkflowDefinition } from "../lib/workflow-loader";
 import { ui } from "../lib/ui";
 
@@ -102,10 +103,6 @@ async function resolveWorkflowPath(inputPath: string): Promise<string> {
 
     throw new UserInputError(`Failed to access workflow path "${absolutePath}": ${getErrorMessage(error)}`);
   }
-}
-
-function workflowRequiresTask(workflow: WorkflowDefinition): boolean {
-  return workflow.steps.some((step) => step.requires.inputs.includes("task"));
 }
 
 export class RunCommand extends BaseCommand {
