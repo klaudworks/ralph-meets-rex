@@ -18,15 +18,15 @@ export class ContinueCommand extends BaseCommand {
     details:
       "Loads `.rmr/runs/<run-id>.json` and continues orchestration from the stored step unless overridden. If a harness session id exists (or is provided), rmr attempts harness resume first.",
     examples: [
-      ["Resume a paused run", "$0 continue 20260316-153210Z"],
-      ["Resume from a specific step", "$0 continue 20260316-153210Z --step verify"],
+      ["Resume a paused run", "$0 continue 20260316-153210"],
+      ["Resume from a specific step", "$0 continue 20260316-153210 --step verify"],
       [
         "Resume with a hint",
-        "$0 continue 20260316-153210Z --hint \"Plan mode only: read and propose changes, do not edit files.\""
+        "$0 continue 20260316-153210 --hint \"Plan mode only: read and propose changes, do not edit files.\""
       ],
       [
         "Force session override",
-        "$0 continue 20260316-153210Z --session-id abc123"
+        "$0 continue 20260316-153210 --session-id abc123"
       ]
     ]
   });

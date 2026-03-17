@@ -25,9 +25,7 @@ async function runCli(args: string[], cwd: string, env: Record<string, string>) 
 }
 
 function parseRunId(output: string): string {
-  const match = output.match(
-    /run-id:\s+([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i
-  );
+  const match = output.match(/run-id:\s+([0-9]{8}-[0-9]{6})/);
   if (!match?.[1]) {
     throw new Error(`run-id not found in output: ${output}`);
   }
@@ -282,7 +280,7 @@ exit 1
       "utf8"
     );
 
-    const runId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
+    const runId = "20260317-010203";
     await writeFile(
       resolve(root, ".rmr", "runs", `${runId}.json`),
       JSON.stringify(
