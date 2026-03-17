@@ -187,6 +187,8 @@ rmr run .rmr/workflows/beads/workflow.yaml
 
 </details>
 
+Have your own custom, tested workflow? See [examples/](examples/), then [open an issue](https://github.com/klaudworks/ralph-meets-rex/issues/new) to share it. If you want attribution, include any links you want mentioned (GitHub profile, X/Twitter, etc.).
+
 ## Supported Harnesses
 
 Specify a default harness (and optionally model) at the top level of your workflow file. Individual steps can override both, so you can mix providers within a single workflow.
