@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { appendFile, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { RmrConfig } from "./config";
@@ -22,6 +22,20 @@ export function generateRunId(now = new Date()): string {
 
 export function runFilePath(config: RmrConfig, runId: string): string {
   return resolve(config.runsDir, `${runId}.json`);
+}
+
+export function runLogPath(config: RmrConfig, runId: string): string {
+  return resolve(config.runsDir, `${runId}.log`);
+}
+
+export async function appendToRunLog(
+  config: RmrConfig,
+  runId: string,
+  content: string
+): Promise<string> {
+  const path = runLogPath(config, runId);
+  await appendFile(path, content, "utf8");
+  return path;
 }
 
 export function createInitialRunState(options: {

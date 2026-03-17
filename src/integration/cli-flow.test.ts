@@ -143,15 +143,20 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
 
     const runId = parseRunId(result.stdout);
     const runFile = resolve(root, ".rmr", "runs", `${runId}.json`);
+    const runLogFile = resolve(root, ".rmr", "runs", `${runId}.log`);
     const persisted = JSON.parse(await readFile(runFile, "utf8")) as {
       status: string;
       current_step: string;
       context: Record<string, string>;
     };
+    const runLog = await readFile(runLogFile, "utf8");
 
     expect(persisted.status).toBe("done");
     expect(persisted.current_step).toBe("done");
     expect(persisted.context["execute.result"]).toBe("ok");
+    expect(runLog).toContain("STEP: execute (step 1) | Started:");
+    expect(runLog).toContain("Status: success");
+    expect(runLog).toContain("<rmr:result>ok</rmr:result>");
   });
 
   test("run pauses and continue resumes", async () => {
@@ -197,6 +202,11 @@ fi
     expect(paused.exitCode).toBe(0);
     expect(paused.stderr).toContain("Paused:");
     const runId = parseRunId(paused.stdout);
+    const runLogFile = resolve(root, ".rmr", "runs", `${runId}.log`);
+    const pausedRunLog = await readFile(runLogFile, "utf8");
+
+    expect(pausedRunLog).toContain("Status: paused");
+    expect(pausedRunLog).toContain("<rmr:result>pending</rmr:result>");
 
     const resumed = await runCli(["continue", runId], root, {
       ...process.env,
@@ -208,6 +218,11 @@ fi
     expect(resumed.stdout).toContain("Run completed");
     expect(resumed.stdout).toContain("Step 1: execute");
     expect(resumed.stdout).toContain("harness: claude    model: (default)");
+
+    const resumedRunLog = await readFile(runLogFile, "utf8");
+    expect(resumedRunLog.match(/STEP: execute \(step 1\) \| Started:/g)?.length).toBe(2);
+    expect(resumedRunLog).toContain("Status: success");
+    expect(resumedRunLog).toContain("<rmr:result>ok</rmr:result>");
   }, 15000);
 
   test("run includes harness failure details when harness exits non-zero", async () => {

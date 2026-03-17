@@ -3,7 +3,7 @@ import { loadPromptFile, composePrompt } from "./prompt-composer";
 import { getHarnessAdapter } from "./harness-adapters";
 import { runHarnessCommand } from "./process-runner";
 import { parseRmrOutput, validateRequiredOutputKeys } from "./rmr-output-parser";
-import { saveRunState } from "./run-state";
+import { appendToRunLog, saveRunState } from "./run-state";
 import { assertRequiredInputs, resolveTemplate } from "./templating";
 import type { HarnessName, RunState, StepExecution, WorkflowDefinition, WorkflowStep } from "./types";
 import { ui } from "./ui";
@@ -15,6 +15,8 @@ interface ContinueOverrides {
   sessionId?: string;
   hint?: string;
 }
+
+type StepLogStatus = "success" | "paused";
 
 function findStep(workflow: WorkflowDefinition, stepId: string): WorkflowStep | undefined {
   return workflow.steps.find((step) => step.id === stepId);
@@ -95,6 +97,31 @@ function applyOutputToContext(
 
     context[`${stepId}.${key}`] = value;
   }
+}
+
+function formatStepLogEntry(params: {
+  stepId: string;
+  stepNumber: number;
+  startedAt: string;
+  completedAt: string;
+  status: StepLogStatus;
+  combinedOutput: string;
+}): string {
+  const separator = `${"=".repeat(80)}\n`;
+  const output =
+    params.combinedOutput.length > 0
+      ? params.combinedOutput.endsWith("\n")
+        ? params.combinedOutput
+        : `${params.combinedOutput}\n`
+      : "\n";
+
+  return (
+    `${separator}STEP: ${params.stepId} (step ${params.stepNumber}) | Started: ${params.startedAt}\n` +
+    `${separator}` +
+    `${output}\n` +
+    `${separator}STEP: ${params.stepId} (step ${params.stepNumber}) | Completed: ${params.completedAt} | Status: ${params.status}\n` +
+    `${separator}\n`
+  );
 }
 
 export async function runWorkflow(
@@ -194,6 +221,19 @@ export async function runWorkflow(
       }
 
       if (result.exitCode !== 0) {
+        const completedAt = new Date().toISOString();
+        await appendToRunLog(
+          config,
+          runState.run_id,
+          formatStepLogEntry({
+            stepId: step.id,
+            stepNumber,
+            startedAt: stepStartedAt,
+            completedAt,
+            status: "paused",
+            combinedOutput: result.combinedOutput
+          })
+        );
         await pauseRun(
           config,
           runState,
@@ -212,6 +252,19 @@ export async function runWorkflow(
       }
 
       if (result.combinedOutput.includes(HUMAN_SENTINEL)) {
+        const completedAt = new Date().toISOString();
+        await appendToRunLog(
+          config,
+          runState.run_id,
+          formatStepLogEntry({
+            stepId: step.id,
+            stepNumber,
+            startedAt: stepStartedAt,
+            completedAt,
+            status: "paused",
+            combinedOutput: result.combinedOutput
+          })
+        );
         await pauseRun(
           config,
           runState,
@@ -228,6 +281,19 @@ export async function runWorkflow(
         validateRequiredOutputKeys(stepOutput, step.requires.outputs);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to parse step output.";
+        const completedAt = new Date().toISOString();
+        await appendToRunLog(
+          config,
+          runState.run_id,
+          formatStepLogEntry({
+            stepId: step.id,
+            stepNumber,
+            startedAt: stepStartedAt,
+            completedAt,
+            status: "paused",
+            combinedOutput: result.combinedOutput
+          })
+        );
         await pauseRun(
           config,
           runState,
@@ -243,6 +309,19 @@ export async function runWorkflow(
 
       const nextState = stepOutput.next_state ?? step.next_step;
       if (!isValidTarget(workflow, nextState)) {
+        const completedAt = new Date().toISOString();
+        await appendToRunLog(
+          config,
+          runState.run_id,
+          formatStepLogEntry({
+            stepId: step.id,
+            stepNumber,
+            startedAt: stepStartedAt,
+            completedAt,
+            status: "paused",
+            combinedOutput: result.combinedOutput
+          })
+        );
         await pauseRun(
           config,
           runState,
@@ -254,6 +333,19 @@ export async function runWorkflow(
       }
 
       if (nextState === "human_intervention") {
+        const completedAt = new Date().toISOString();
+        await appendToRunLog(
+          config,
+          runState.run_id,
+          formatStepLogEntry({
+            stepId: step.id,
+            stepNumber,
+            startedAt: stepStartedAt,
+            completedAt,
+            status: "paused",
+            combinedOutput: result.combinedOutput
+          })
+        );
         await pauseRun(
           config,
           runState,
@@ -265,12 +357,25 @@ export async function runWorkflow(
       }
 
       // Record step execution in history
+      const stepCompletedAt = new Date().toISOString();
+      await appendToRunLog(
+        config,
+        runState.run_id,
+        formatStepLogEntry({
+          stepId: step.id,
+          stepNumber,
+          startedAt: stepStartedAt,
+          completedAt: stepCompletedAt,
+          status: "success",
+          combinedOutput: result.combinedOutput
+        })
+      );
       const stepExecution: StepExecution = {
         step_number: stepNumber,
         step_id: step.id,
         session_id: runState.last_harness?.session_id ?? null,
         started_at: stepStartedAt,
-        completed_at: new Date().toISOString()
+        completed_at: stepCompletedAt
       };
       runState.step_history.push(stepExecution);
       stepNumber++;
