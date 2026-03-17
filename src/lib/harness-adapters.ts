@@ -299,7 +299,7 @@ const adapters: Record<HarnessName, HarnessAdapter> = {
     },
     createStreamParser: createOpenCodeStreamParser,
     resumeTemplate(sessionId) {
-      return `opencode run --session ${sessionId}`;
+      return `opencode --session ${sessionId}`;
     }
   },
   codex: {
@@ -316,7 +316,7 @@ const adapters: Record<HarnessName, HarnessAdapter> = {
     },
     createStreamParser: createCodexStreamParser,
     resumeTemplate(sessionId) {
-      return `codex exec resume ${sessionId} "<prompt>"`;
+      return `codex resume ${sessionId}`;
     }
   },
   copilot: {

@@ -90,8 +90,8 @@ describe("harness adapters", () => {
 
   test("resume templates render by harness", () => {
     expect(getHarnessAdapter("claude").resumeTemplate("abc")).toBe("claude --resume abc");
-    expect(getHarnessAdapter("opencode").resumeTemplate("abc")).toBe("opencode run --session abc");
-    expect(getHarnessAdapter("codex").resumeTemplate("abc")).toContain("codex exec resume abc");
+    expect(getHarnessAdapter("opencode").resumeTemplate("abc")).toBe("opencode --session abc");
+    expect(getHarnessAdapter("codex").resumeTemplate("abc")).toBe("codex resume abc");
   });
 
   test("unknown harness throws", () => {
