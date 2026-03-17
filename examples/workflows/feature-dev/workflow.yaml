@@ -1,14 +1,3 @@
-# Feature development workflow for rmr.
-# Three steps: plan (research + plan), implement, verify (review).
-# The verify step can loop back to implement or escalate to human intervention.
-#
-# Prompt files are co-located with this workflow in the same folder.
-# Template variables reference step outputs: {{step_id.key}}
-#
-# Routing is controlled by <rmr:next_state> in agent output.
-# The planner can reject a task by setting next_state=done.
-# The reviewer can request changes by setting next_state=implement.
-
 id: feature-dev
 name: Feature Development
 harness: claude
