@@ -8,9 +8,9 @@ import { InstallCommand } from "./commands/install";
 import { ListCommand } from "./commands/list";
 import { RootCommand } from "./commands/root";
 import { RmrError } from "./lib/errors";
-import { logger } from "./lib/logger";
 import { RunCommand } from "./commands/run";
 import { binaryName } from "./lib/binary-name";
+import { ui } from "./lib/ui";
 import { getVersion } from "./lib/version";
 
 const [, , ...args] = process.argv;
@@ -37,13 +37,13 @@ try {
   process.exitCode = Math.max(process.exitCode ?? 0, exitCode);
 } catch (error) {
   if (error instanceof RmrError) {
-    logger.error(`${error.code}: ${error.message}`);
+    ui.error(`${error.code}: ${error.message}`);
     process.exitCode = 1;
   } else if (error instanceof Error) {
-    logger.error(error.message);
+    ui.error(error.message);
     process.exitCode = 1;
   } else {
-    logger.error("Unknown error");
+    ui.error("Unknown error");
     process.exitCode = 1;
   }
 }
