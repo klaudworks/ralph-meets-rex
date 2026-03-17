@@ -162,6 +162,25 @@ rmr install feature-dev
 rmr run .rmr/workflows/feature-dev/workflow.yaml
 ```
 
+<details>
+<summary><strong>beads</strong> (requires beads + toon)</summary>
+
+Autonomous issue loop powered by Beads: pick the next issue, plan, implement,
+review, then continue with the next issue.
+
+See docs: [docs/workflows/beads/](docs/workflows/beads/)
+
+Prerequisites:
+- [beads](https://github.com/steveyegge/beads)
+- [toon](https://github.com/toon-format/toon?tab=readme-ov-file)
+
+```bash
+rmr install beads
+rmr run .rmr/workflows/beads/workflow.yaml
+```
+
+</details>
+
 ## Supported Harnesses
 
 Specify a default harness (and optionally model) at the top level of your workflow file. Individual steps can override both, so you can mix providers within a single workflow.

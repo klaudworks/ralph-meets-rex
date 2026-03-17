@@ -1,0 +1,27 @@
+# Beads autonomous loop for rmr.
+# Three steps: plan (select + research + plan), implement, verify (review).
+# verify routes back to plan after approval to continue processing issues.
+
+id: beads
+name: Beads Development Workflow
+harness: claude
+
+steps:
+  - id: plan
+    prompt_file: planner-agent.md
+    next_step: implement
+    requires:
+      outputs: [issue_id]
+
+  - id: implement
+    prompt_file: implement-agent.md
+    next_step: verify
+    requires:
+      inputs: [plan.issue_id]
+      outputs: [issue_id]
+
+  - id: verify
+    prompt_file: review-agent.md
+    next_step: plan
+    requires:
+      inputs: [implement.issue_id]

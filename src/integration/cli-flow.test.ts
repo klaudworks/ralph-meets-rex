@@ -180,6 +180,25 @@ echo '{"type":"result","subtype":"success","session_id":"fake-session-1","result
     expect(installedWorkflow).toContain("id: feature-dev");
   });
 
+  test("install copies beads workflow into .rmr/workflows", async () => {
+    const root = await mkdtemp(resolve(tmpdir(), "rmr-cli-"));
+
+    const result = await runCli(["install", "beads"], root, {
+      ...process.env
+    } as Record<string, string>);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("installed .rmr/workflows/beads/");
+
+    const installedWorkflow = await readFile(
+      resolve(root, ".rmr", "workflows", "beads", "workflow.yaml"),
+      "utf8"
+    );
+    expect(installedWorkflow).toContain("id: beads");
+    expect(installedWorkflow).toContain("harness: claude");
+    expect(installedWorkflow).not.toContain("model:");
+  });
+
   test("run reaches done and writes done state", async () => {
     const root = await mkdtemp(resolve(tmpdir(), "rmr-cli-"));
     const fakeBinDir = resolve(root, "fake-bin");

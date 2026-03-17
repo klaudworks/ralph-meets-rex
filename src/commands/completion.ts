@@ -38,7 +38,7 @@ function bashScript(): string {
     "  fi",
     "",
     "  if [[ \"${prev}\" == \"install\" ]]; then",
-    "    COMPREPLY=( $(compgen -W \"feature-dev\" -- \"${cur}\") )",
+    "    COMPREPLY=( $(compgen -W \"feature-dev beads\" -- \"${cur}\") )",
     "    return 0",
     "  fi",
     "}",
@@ -69,7 +69,7 @@ function zshScript(): string {
     "  fi",
     "",
     "  if [[ ${words[2]} == install && $CURRENT -eq 3 ]]; then",
-    "    compadd -- feature-dev",
+    "    compadd -- feature-dev beads",
     "    return",
     "  fi",
     "}",
@@ -91,7 +91,7 @@ function fishScript(): string {
     `complete -c ${binaryName} -n '__fish_use_subcommand' -a 'install run continue complete completion'`,
     `complete -c ${binaryName} -n '__fish_seen_subcommand_from continue' -a '(__rex_complete_run_id)'`,
     `complete -c ${binaryName} -n '__fish_seen_subcommand_from run' -a '(__rex_complete_workflow)'`,
-    `complete -c ${binaryName} -n '__fish_seen_subcommand_from install' -a 'feature-dev'`
+    `complete -c ${binaryName} -n '__fish_seen_subcommand_from install' -a 'feature-dev beads'`
   ].join("\n");
 }
 
