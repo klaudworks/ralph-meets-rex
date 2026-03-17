@@ -94,6 +94,20 @@ describe("harness adapters", () => {
     expect(getHarnessAdapter("codex").resumeTemplate("abc")).toBe("codex resume abc");
   });
 
+  test("copilot resume with allow-all includes auto-approval flags", () => {
+    const adapter = getHarnessAdapter("copilot");
+    const command = adapter.buildResumeCommand("session123", "hello", { allowAll: true });
+    expect(command.args).toContain("--allow-all");
+    expect(command.args).toContain("--no-ask-user");
+  });
+
+  test("copilot resume without allow-all omits auto-approval flags", () => {
+    const adapter = getHarnessAdapter("copilot");
+    const command = adapter.buildResumeCommand("session123", "hello", { allowAll: false });
+    expect(command.args).not.toContain("--allow-all");
+    expect(command.args).not.toContain("--no-ask-user");
+  });
+
   test("unknown harness throws", () => {
     expect(() => getHarnessAdapter("unknown")).toThrow('Unknown harness "unknown".');
   });

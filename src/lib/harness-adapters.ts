@@ -327,7 +327,8 @@ const adapters: Record<HarnessName, HarnessAdapter> = {
       return { binary: "copilot", args: withModelArgs(options.model, args) };
     },
     buildResumeCommand(_sessionId, prompt, options) {
-      const args = ["-p", prompt];
+      const auto = options.allowAll ? ["--allow-all", "--no-ask-user"] : [];
+      const args = [...auto, "-p", prompt];
       return { binary: "copilot", args: withModelArgs(options.model, args) };
     },
     createStreamParser: createPassthroughParser,
