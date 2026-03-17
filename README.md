@@ -149,9 +149,12 @@ Run state is persisted after every step to `.rmr/runs/`, so `rmr continue <run-i
 
 ## Provided Workflows
 
-### [feature-dev](docs/workflows/feature-dev/)
+<details open>
+<summary><strong>feature-dev</strong></summary>
 
 Plan, implement, and review a single feature end-to-end with an automatic revision loop.
+
+See docs for more info: [docs/workflows/feature-dev/](docs/workflows/feature-dev/)
 
 <p align="center">
   <img src="docs/workflows/feature-dev/flow.svg" width="720" />
@@ -162,17 +165,20 @@ rmr install feature-dev
 rmr run .rmr/workflows/feature-dev/workflow.yaml
 ```
 
+</details>
+
 <details>
 <summary><strong>beads</strong> (requires beads + toon)</summary>
 
 Autonomous issue loop powered by Beads: pick the next issue, plan, implement,
 review, then continue with the next issue.
 
-See docs: [docs/workflows/beads/](docs/workflows/beads/)
+See docs for more info: [docs/workflows/beads/](docs/workflows/beads/)
 
 Prerequisites:
 - [beads](https://github.com/steveyegge/beads)
 - [toon](https://github.com/toon-format/toon?tab=readme-ov-file)
+- Beads issues created semi-automatically together with your coding agent
 
 ```bash
 rmr install beads
