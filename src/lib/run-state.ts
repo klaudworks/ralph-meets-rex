@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { appendFile, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -5,19 +6,8 @@ import type { RmrConfig } from "./config";
 import { StorageError } from "./errors";
 import type { RunState, WorkflowDefinition } from "./types";
 
-function pad(input: number): string {
-  return String(input).padStart(2, "0");
-}
-
-export function generateRunId(now = new Date()): string {
-  const yyyy = now.getUTCFullYear();
-  const mm = pad(now.getUTCMonth() + 1);
-  const dd = pad(now.getUTCDate());
-  const hh = pad(now.getUTCHours());
-  const min = pad(now.getUTCMinutes());
-  const sec = pad(now.getUTCSeconds());
-
-  return `${yyyy}${mm}${dd}-${hh}${min}${sec}Z`;
+export function generateRunId(): string {
+  return randomUUID();
 }
 
 export function runFilePath(config: RmrConfig, runId: string): string {
